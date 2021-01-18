@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "298008551102",
+    "project_id": "tbc-hr-app",
+    "storage_bucket": "tbc-hr-app.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:298008551102:android:6ff75ee9292bba35b508ef",
+        "android_client_info": {
+          "package_name": "com.tbc.attendance.tbc_attendance_application"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "298008551102-ag26mpodfonrtua8o9d2ecc1jtkdd1ug.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDYIhqo55tcTGdg7gXDBACE09o8xb6_sao"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "298008551102-ag26mpodfonrtua8o9d2ecc1jtkdd1ug.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "298008551102-rjpjqppdetf1t1gfhtnmb07oe1luj6jj.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.tbc.attendance.tbcAttendanceApplication"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
