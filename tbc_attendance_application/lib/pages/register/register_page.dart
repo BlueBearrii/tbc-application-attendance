@@ -1,9 +1,15 @@
 import 'dart:io';
+import 'dart:math';
 import 'dart:ui';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dio/dio.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:tbc_attendance_application/pages/register/register_class_functions.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
+import 'package:http/http.dart' as http;
 
 class RegisterPage extends StatefulWidget {
   RegisterPage({Key key}) : super(key: key);
@@ -13,6 +19,17 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
+/* -------------------------------------------------------------------------- */
+/*                             Initialize firebase                            */
+/* -------------------------------------------------------------------------- */
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
+  FirebaseAuth auth = FirebaseAuth.instance;
+  firebase_storage.FirebaseStorage storage =
+      firebase_storage.FirebaseStorage.instance;
+
+/* -------------------------------------------------------------------------- */
+/*                                  Variable                                  */
+/* -------------------------------------------------------------------------- */
   final _formKey = GlobalKey<FormState>();
   // User information
   String _employeeId;
@@ -20,6 +37,10 @@ class _RegisterPageState extends State<RegisterPage> {
   String _password;
   String _confirmPassword;
   File imageFile;
+
+  bool manager = false;
+  String pic;
+  String username;
 
   // Show password&confirm toggle
   bool _passwordHide = true;
@@ -31,6 +52,19 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _passwordValidator = false;
   bool _confirmPasswordValidator = false;
 
+  bool loading = false;
+  bool registerState = false;
+  bool errorStatus = false;
+
+  // Key switch page
+  // 1 : information page
+  // 2 : verify page
+  int _onPage = 1;
+
+/* -------------------------------------------------------------------------- */
+/*                                  Functions                                 */
+/* -------------------------------------------------------------------------- */
+
   bool onSubmitCheckError() {
     if (_emailValidator == false ||
         _emailValidator == false ||
@@ -41,15 +75,6 @@ class _RegisterPageState extends State<RegisterPage> {
       return true;
   }
 
-  bool loading = false;
-  bool registerState = false;
-  bool errorStatus = false;
-
-  // Key switch page
-  // 1 : information page
-  // 2 : verify page
-  int _onPage = 1;
-
   // Function use default camera
   Future _isCameraOnPress(ImageSource imageSource) async {
     try {
@@ -59,6 +84,144 @@ class _RegisterPageState extends State<RegisterPage> {
       });
     } catch (errors) {}
   }
+
+  Future<bool> identifyEmployeeId(String empId) async {
+    await firestore
+        .collection("identify_employee")
+        .get()
+        .then((QuerySnapshot querySnapshot) => {
+              querySnapshot.docs.forEach((doc) {
+                if (doc["id"] == empId)
+                  setState(() {
+                    _employeeIdValidator = true;
+                  });
+              })
+            });
+  }
+
+  Future<bool> identifyImage() async {
+    bool status = false;
+    String picName;
+    await firestore
+        .collection("identify_employee")
+        .get()
+        .then((QuerySnapshot querySnapshot) => {
+              querySnapshot.docs.forEach((doc) {
+                print(doc.data()["pic"]);
+                if (doc["id"] == _employeeId)
+                  return picName = doc.data()["pic"];
+              })
+            });
+
+    String downloadURL = await firebase_storage.FirebaseStorage.instance
+        .ref(picName)
+        .getDownloadURL();
+
+    //final documentDirectory = await getApplicationDocumentsDirectory();
+    //final file = File(join(documentDirectory.path, 'imagetest.png'));
+
+    var rng = new Random();
+    Directory tempDir = await getTemporaryDirectory();
+    String tempPath = tempDir.path;
+    File file = new File('$tempPath' + (rng.nextInt(100)).toString() + '.png');
+    http.Response response = await http.get(downloadURL);
+    await file.writeAsBytes(response.bodyBytes);
+    print(file);
+
+    Response responsed;
+    Dio dio = new Dio();
+    FormData formData = new FormData.fromMap({
+      "source": await MultipartFile.fromFile(
+        imageFile.path,
+        filename: file.toString(),
+      ),
+      "target":
+          await MultipartFile.fromFile(file.path, filename: file.toString()),
+    });
+    responsed = await dio.post(
+        "http://faceapi.vistecbooking.cybertoryth.com/compare",
+        data: formData);
+
+    //print(responsed.data["message"]);
+
+    if (responsed.data["message"] == "Match!") status = true;
+
+    return status;
+  }
+
+  Future<bool> registerEmployee() async {
+    if (await identifyImage()) {
+      await firestore
+          .collection("identify_employee")
+          .get()
+          .then((QuerySnapshot querySnapshot) => {
+                querySnapshot.docs.forEach((doc) {
+                  if (doc["id"] == _employeeId) {
+                    username = doc.data()["name"];
+                    pic = doc.data()["pic"];
+                    manager = doc.data()["manager"];
+                  }
+                })
+              })
+          .then((value) async {
+        await auth
+            .createUserWithEmailAndPassword(email: _email, password: _password)
+            .then((value) {
+          firestore.collection('users').add({
+            "employeeId": _employeeId,
+            "email": _email,
+            "name": username,
+            "manager": manager,
+            "pic": pic,
+          }).then((value) {
+            firestore
+                .collection('check_in_state')
+                .doc(_employeeId)
+                .set({"checkIn": false}).then((value) {
+              firestore
+                  .collection('approve_state')
+                  .doc(_employeeId)
+                  .set({"approveState": false}).then((value) {
+                firestore
+                    .collection('feedback')
+                    .doc(_employeeId)
+                    .set({"messageBox": {}}).then((value) {
+                  setState(() {
+                    loading = false;
+                    registerState = true;
+                    errorStatus = false;
+                  });
+                }).catchError((onError) {
+                  loading = false;
+                  registerState = false;
+                  errorStatus = true;
+                });
+              }).catchError((onError) {
+                loading = false;
+                registerState = false;
+                errorStatus = true;
+              });
+            }).catchError((onError) {
+              loading = false;
+              registerState = false;
+              errorStatus = true;
+            });
+          }).catchError((onError) {
+            loading = false;
+            registerState = false;
+            errorStatus = true;
+          });
+        }).catchError((onError) {
+          loading = false;
+          registerState = false;
+          errorStatus = true;
+        });
+      });
+    }
+  }
+
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
 
   @override
   Widget build(BuildContext context) {
@@ -227,13 +390,8 @@ class _RegisterPageState extends State<RegisterPage> {
                                         setState(() {
                                           _employeeId = value;
                                         });
-                                        await RegisterNewAccount()
-                                            .identifyEmployeeId(value)
-                                            .then((value) {
-                                          setState(() {
-                                            _employeeIdValidator = value;
-                                          });
-                                        });
+                                        await identifyEmployeeId(value);
+
                                         _formKey.currentState.validate();
                                       },
                                       keyboardType: TextInputType.text,
@@ -615,21 +773,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                                     setState(() {
                                                       loading = true;
                                                     });
-                                                    var user = {
-                                                      "employeeId": _employeeId,
-                                                      "email": _email,
-                                                      "password": _password
-                                                    };
-                                                    RegisterNewAccount()
-                                                        .registerEmployee(
-                                                            user, imageFile)
-                                                        .then((value) {
-                                                      setState(() {
-                                                        loading = false;
-                                                        registerState = value;
-                                                        errorStatus = !value;
-                                                      });
-                                                    });
+                                                    registerEmployee();
                                                   },
                                                   child: Text("Use")),
                                             )
