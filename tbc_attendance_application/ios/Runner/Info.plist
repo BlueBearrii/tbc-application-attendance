@@ -48,6 +48,13 @@
 		<string>This app needs access to Camera</string>
 		<key>NSMicrophoneUsageDescription</key>
 		<string>This app needs access to Microphone</string>
+	
+	<!-- GPS Location permissrion -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs access to location when open.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>This app needs access to location when in the background.</string>
+
 	<!-- & END & -->
 </dict>
 </plist>
