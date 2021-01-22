@@ -12,8 +12,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SharedPreferences prefs = await SharedPreferences.getInstance();
   await Firebase.initializeApp()
-      .then((value) => print("Firebase initialize success"))
-      .then((value) async {
+      .then((value) => print("Firebase initialize success"));
+
+  if (FirebaseAuth.instance.currentUser != null) {
     await FirebaseFirestore.instance
         .collection('users')
         .get()
@@ -30,7 +31,7 @@ void main() async {
                 }
               })
             });
-  });
+  }
 
   User user = FirebaseAuth.instance.currentUser;
   print(user);
