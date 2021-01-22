@@ -55,7 +55,6 @@ class _HomePageState extends State<HomePage> {
 
   bool switchImage() {
     var now = new DateTime.now();
-
     if (new DateFormat("a").format(now) == "AM") {
       return true;
     } else {
@@ -74,7 +73,6 @@ class _HomePageState extends State<HomePage> {
 
   Stream<dynamic> getCurrentPosition() {
     var _getDistance;
-
     void onData() {
       print("Distance : $_getDistance");
       if (_getDistance <= 50) {
@@ -110,6 +108,8 @@ class _HomePageState extends State<HomePage> {
         .doc(employeeId)
         .get()
         .then((value) {
+      print(employeeId);
+      print(value.data()["checkIn"]);
       setState(() {
         checkIn = value.data()["checkIn"];
       });
@@ -126,7 +126,6 @@ class _HomePageState extends State<HomePage> {
         String getImageUrl = await firebase_storage.FirebaseStorage.instance
             .ref(pic)
             .getDownloadURL();
-
         print(getImageUrl);
         setState(() {
           picURL = getImageUrl;
