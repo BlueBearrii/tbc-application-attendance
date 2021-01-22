@@ -1,5 +1,5 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:tbc_attendance_application/pages/login/login_class.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -7,6 +7,8 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  FirebaseAuth auth = FirebaseAuth.instance;
+
   final _formKey = GlobalKey<FormState>();
   String _email;
   String _password;
@@ -16,7 +18,24 @@ class _LoginPageState extends State<LoginPage> {
 
   // Show password&confirm toggle
   bool _passwordHide = true;
-  bool _confirmPasswordHide = true;
+
+  Future onLoginSubmit() async {
+    await auth
+        .signInWithEmailAndPassword(email: _email, password: _password)
+        .then((value) {
+      setState(() {
+        isLoading = false;
+        _authError = false;
+      });
+      Navigator.of(context)
+          .pushNamedAndRemoveUntil('/app', (Route<dynamic> route) => false);
+    }).catchError((onError) {
+      setState(() {
+        isLoading = false;
+        _authError = true;
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -158,27 +177,7 @@ class _LoginPageState extends State<LoginPage> {
                           _formKey.currentState.validate();
                           if (_formKey.currentState.validate()) {
                             print(isLoading);
-                            LoginFunctions()
-                                .onLoginSubmit(_email, _password)
-                                .then((value) {
-                              setState(() {
-                                isLoading = false;
-                              });
-                              print(value);
-                              if (value[0]) {
-                                Navigator.of(context).pushNamedAndRemoveUntil(
-                                    '/app', (Route<dynamic> route) => false);
-                              }
-                              if (value[1]) {
-                                setState(() {
-                                  _authError = true;
-                                });
-                              }
-                            });
-                          } else {
-                            setState(() {
-                              isLoading = false;
-                            });
+                            onLoginSubmit();
                           }
                         },
                         child: isLoading
