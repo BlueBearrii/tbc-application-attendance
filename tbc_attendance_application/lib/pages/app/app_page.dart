@@ -1,8 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tbc_attendance_application/pages/app/feedback/feedback.dart';
 import 'package:tbc_attendance_application/pages/app/history/history.dart';
 import 'package:tbc_attendance_application/pages/app/home/home.dart';
+import 'package:tbc_attendance_application/pages/app/home/newHome.dart';
 
 class Application extends StatefulWidget {
   const Application({Key key}) : super(key: key);
@@ -17,6 +19,7 @@ class _ApplicationState extends State<Application> {
 /* -------------------------------------------------------------------------- */
 
   int _selectedIndex = 0;
+  bool manager;
 
 /* -------------------------------------------------------------------------- */
 /*                                  Function                                  */
@@ -24,7 +27,7 @@ class _ApplicationState extends State<Application> {
   onChangePage() {
     switch (_selectedIndex) {
       case 0:
-        return HomePage();
+        return HomeScreen();
       case 1:
         return HistoryPage();
       case 2:
@@ -32,6 +35,19 @@ class _ApplicationState extends State<Application> {
         break;
       default:
     }
+  }
+
+  setManagerState() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      manager = prefs.getBool("manager");
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    setManagerState();
   }
 
   @override
@@ -79,10 +95,7 @@ class _ApplicationState extends State<Application> {
                   Text('Manager'),
                 ],
               ),
-              onTap: () {
-                // Update the state of the app.
-                // ...
-              },
+              onTap: () {},
             ),
             ListTile(
               title: Row(

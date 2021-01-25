@@ -45,6 +45,8 @@ class _HomePageState extends State<HomePage> {
   String pic;
   String picURL;
 
+  int testFunction = 0;
+
 /* -------------------------------------------------------------------------- */
 /*                                  Function                                  */
 /* -------------------------------------------------------------------------- */
@@ -147,14 +149,16 @@ class _HomePageState extends State<HomePage> {
 
   checkInFunction() async {
     print("Function check in is running");
+    var checkInImagePath =
+        "/check_in_image/$employeeId/${DateFormat.yMMMd().format(new DateTime.now())}.png";
     var now = new DateTime.now();
     await firestore.collection('check_in_logs').add({
-      "employee_id": "A000",
+      "employee_id": employeeId,
       "date": DateFormat.yMMMd().format(now),
       "time": DateFormat.jm().format(now),
-      "pic": null,
+      "pic": checkInImagePath,
       "approve": approveState,
-      "status": "On time"
+      "status": null
     }).then((value) {
       upLoadFile();
     });
@@ -162,12 +166,14 @@ class _HomePageState extends State<HomePage> {
 
   checkOutFunction() async {
     print("Function check out is running");
+    var checkOutImagePath =
+        "/check_in_image/$employeeId/${DateFormat.yMMMd().format(new DateTime.now())}.png";
     var now = new DateTime.now();
     await firestore.collection('check_out_logs').add({
-      "employee_id": "A000",
+      "employee_id": employeeId,
       "date": DateFormat.yMMMd().format(now),
       "time": DateFormat.jm().format(now),
-      "pic": null,
+      "pic": checkOutImagePath,
       "emotion": null
     }).then((value) {
       upLoadFile();
@@ -443,54 +449,55 @@ class _HomePageState extends State<HomePage> {
                       /* -------------------------------------------------------------------------- */
 
                       Container(
-                        height: 160,
-                        child: ListView(
+                        height: 170,
+                        margin: EdgeInsets.only(bottom: 10),
+                        child: ListView.builder(
                           scrollDirection: Axis.horizontal,
-                          children: [
-                            Container(
-                              margin: EdgeInsets.only(right: 36),
-                            ),
-                            Container(
-                              margin: EdgeInsets.only(right: 10),
-                              width: 300,
-                              height: 150,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10)),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
-                                    spreadRadius: 1.5,
-                                    blurRadius: 6,
-                                    offset: Offset(
-                                        0, 3), // changes position of shadow
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Container(
-                              margin: EdgeInsets.only(right: 10),
-                              width: 300,
-                              height: 150,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10)),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
-                                    spreadRadius: 1.5,
-                                    blurRadius: 6,
-                                    offset: Offset(
-                                        0, 3), // changes position of shadow
-                                  ),
-                                ],
-                              ),
-                            )
-                          ],
+                          itemCount: 3,
+                          itemBuilder: (BuildContext context, int index) =>
+                              Card(
+                                  margin: EdgeInsets.symmetric(horizontal: 5),
+                                  child: Container(
+                                    width: 300,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius:
+                                          BorderRadius.all(Radius.circular(10)),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.05),
+                                          spreadRadius: 1.5,
+                                          blurRadius: 6,
+                                          offset: Offset(0,
+                                              3), // changes position of shadow
+                                        ),
+                                      ],
+                                    ),
+                                  )),
                         ),
-                      )
+                        // Container(
+                        //   margin: EdgeInsets.only(right: 36),
+                        // ),
+                        // Container(
+                        //   margin: EdgeInsets.only(right: 10),
+                        //   width: 300,
+                        //   height: 150,
+                        //   decoration: BoxDecoration(
+                        //     color: Colors.white,
+                        //     borderRadius:
+                        //         BorderRadius.all(Radius.circular(10)),
+                        //     boxShadow: [
+                        //       BoxShadow(
+                        //         color: Colors.black.withOpacity(0.05),
+                        //         spreadRadius: 1.5,
+                        //         blurRadius: 6,
+                        //         offset: Offset(
+                        //             0, 3), // changes position of shadow
+                        //       ),
+                        //     ],
+                        //   ),
+                        // ),
+                      ),
                     ],
                   ),
                 ),
