@@ -100,7 +100,7 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<bool> identifyImage() async {
-    bool status = false;
+    var status = false;
     String picName;
     await firestore
         .collection("identify_employee")
@@ -139,7 +139,7 @@ class _RegisterPageState extends State<RegisterPage> {
           await MultipartFile.fromFile(file.path, filename: file.toString()),
     });
     responsed = await dio.post(
-        "http://faceapi.vistecbooking.cybertoryth.com/compare",
+        "https://faceapi-vistecbooking.cybertoryth.com/compare",
         data: formData);
 
     //print(responsed.data["message"]);
