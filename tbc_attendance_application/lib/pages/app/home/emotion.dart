@@ -1,7 +1,21 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class EmotionPage extends StatelessWidget {
-  const EmotionPage({Key key}) : super(key: key);
+  final String documentId;
+  const EmotionPage({Key key, @required this.documentId}) : super(key: key);
+
+  setEmotion(number) async {
+    print(documentId);
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    var employeeId = prefs.getString("employeeId");
+    FirebaseFirestore.instance
+        .collection('check_out_log')
+        .doc(documentId)
+        .update({"emotion": number});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,11 +40,41 @@ class EmotionPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Image.asset("assets/angry.png"),
-                    Image.asset("assets/frown.png"),
-                    Image.asset("assets/confusing.png"),
-                    Image.asset("assets/grinning.png"),
-                    Image.asset("assets/blow-kiss.png"),
+                    GestureDetector(
+                        onTap: () {
+                          setEmotion(1).then((value) {
+                            Navigator.pop(context);
+                          });
+                        },
+                        child: Image.asset("assets/angry.png")),
+                    GestureDetector(
+                        onTap: () {
+                          setEmotion(2).then((value) {
+                            Navigator.pop(context);
+                          });
+                        },
+                        child: Image.asset("assets/frown.png")),
+                    GestureDetector(
+                        onTap: () {
+                          setEmotion(3).then((value) {
+                            Navigator.pop(context);
+                          });
+                        },
+                        child: Image.asset("assets/confusing.png")),
+                    GestureDetector(
+                        onTap: () {
+                          setEmotion(4).then((value) {
+                            Navigator.pop(context);
+                          });
+                        },
+                        child: Image.asset("assets/grinning.png")),
+                    GestureDetector(
+                        onTap: () {
+                          setEmotion(5).then((value) {
+                            Navigator.pop(context);
+                          });
+                        },
+                        child: Image.asset("assets/blow-kiss.png")),
                   ],
                 ),
               ],
