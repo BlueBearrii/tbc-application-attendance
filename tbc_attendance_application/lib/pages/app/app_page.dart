@@ -27,7 +27,7 @@ class _ApplicationState extends State<Application> {
   onChangePage() {
     switch (_selectedIndex) {
       case 0:
-        return HomeScreen();
+        return HomePage();
       case 1:
         return HistoryPage();
       case 2:
@@ -58,13 +58,18 @@ class _ApplicationState extends State<Application> {
         actions: [
           IconButton(
             icon: const Icon(Icons.mail),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.of(context).pushNamed("/feedback_box");
+            },
           ),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (value) {
+          if (value == 2) {
+            Navigator.of(context).pushNamed("/term_condition");
+          }
           setState(() {
             _selectedIndex = value;
           });
@@ -81,9 +86,9 @@ class _ApplicationState extends State<Application> {
           padding: EdgeInsets.zero,
           children: <Widget>[
             DrawerHeader(
-              child: Text('Drawer Header'),
+              child: Container(),
               decoration: BoxDecoration(
-                color: Colors.blue,
+                color: Theme.of(context).primaryColor,
               ),
             ),
             ListTile(
@@ -95,7 +100,9 @@ class _ApplicationState extends State<Application> {
                   Text('Manager'),
                 ],
               ),
-              onTap: () {},
+              onTap: () {
+                Navigator.of(context).pushNamed("/manager_approve");
+              },
             ),
             ListTile(
               title: Row(

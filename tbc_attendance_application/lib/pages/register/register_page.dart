@@ -115,7 +115,10 @@ class _RegisterPageState extends State<RegisterPage> {
 
     String downloadURL = await firebase_storage.FirebaseStorage.instance
         .ref(picName)
-        .getDownloadURL();
+        .getDownloadURL()
+        .catchError(() {
+      return status = false;
+    });
 
     //final documentDirectory = await getApplicationDocumentsDirectory();
     //final file = File(join(documentDirectory.path, 'imagetest.png'));
@@ -142,14 +145,17 @@ class _RegisterPageState extends State<RegisterPage> {
         "https://faceapi-vistecbooking.cybertoryth.com/compare",
         data: formData);
 
-    //print(responsed.data["message"]);
+    print(responsed.data);
 
-    if (responsed.data["message"] == "Match!") status = true;
+    if (responsed.data["message"] == "Match!")
+      status = true;
+    else
+      status = false;
 
     return status;
   }
 
-  Future<bool> registerEmployee() async {
+  Future registerEmployee() async {
     if (await identifyImage()) {
       await firestore
           .collection("identify_employee")
