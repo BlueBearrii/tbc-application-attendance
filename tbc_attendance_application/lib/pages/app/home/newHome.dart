@@ -79,27 +79,33 @@ class _HomeScreenState extends State<HomeScreen> {
     username = prefs.getString("name");
 
     await storage.ref(imagePath).getDownloadURL().then((imagePath) {
-      setState(() {
-        pictureProfile = imagePath;
-      });
+      if (mounted) {
+        setState(() {
+          pictureProfile = imagePath;
+        });
+      }
     });
     await firestore
         .collection('approve_state')
         .doc(employeeId)
         .get()
         .then((_approveState) {
-      setState(() {
-        approveState = _approveState.data()["approveState"];
-      });
+      if (mounted) {
+        setState(() {
+          approveState = _approveState.data()["approveState"];
+        });
+      }
     });
     await firestore
         .collection('check_in_state')
         .doc(employeeId)
         .get()
         .then((_checkIn) {
-      setState(() {
-        checkIn = _checkIn.data()["checkIn"];
-      });
+      if (mounted) {
+        setState(() {
+          checkIn = _checkIn.data()["checkIn"];
+        });
+      }
     });
     await firestore
         .collection('announcement')
@@ -109,9 +115,11 @@ class _HomeScreenState extends State<HomeScreen> {
       querySnapshot.docs.forEach((doc) {
         messageBox.add(doc["message"]);
       });
-      setState(() {
-        announcement = messageBox;
-      });
+      if (mounted) {
+        setState(() {
+          announcement = messageBox;
+        });
+      }
     });
   }
 
@@ -132,14 +140,16 @@ class _HomeScreenState extends State<HomeScreen> {
     var _getDistance;
     void onData() {
       print("Distance : $_getDistance");
-      if (_getDistance <= 50) {
-        setState(() {
-          enableCheckInButton = true;
-        });
-      } else {
-        setState(() {
-          enableCheckInButton = false;
-        });
+      if (mounted) {
+        if (_getDistance <= 50) {
+          setState(() {
+            enableCheckInButton = true;
+          });
+        } else {
+          setState(() {
+            enableCheckInButton = false;
+          });
+        }
       }
     }
 
@@ -149,6 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
         .listen((Position position) {
       _getDistance = Geolocator.distanceBetween(position.latitude,
           position.longitude, kxBuildingLatitude, kxBuildingLongtitude);
+
       onData();
     });
   }
@@ -243,11 +254,15 @@ class _HomeScreenState extends State<HomeScreen> {
     var now = new DateTime.now();
     var checkInData = {
       "employee_id": employeeId,
-      "date": DateFormat.yMMMd().format(now),
+      "dateTime": DateTime.now(),
+      'year': DateFormat.y().format(now),
+      "month": DateFormat.LLLL().format(now),
+      'week': calculateWeekOfMonth(),
+      'day': DateTime.now().weekday,
       "time": DateFormat.jm().format(now),
       "pic": checkInImagePath,
       "approve": approveState,
-      "status": onTimeStatus
+      "late": onTimeStatus
     };
 
     await firestore.collection('check_in_log').add(checkInData).then((value) {
@@ -260,16 +275,19 @@ class _HomeScreenState extends State<HomeScreen> {
     var checkOutImagePath =
         "/check_out_image/$employeeId/${DateFormat.yMMMd().format(new DateTime.now())}.png";
     var now = new DateTime.now();
-    var checkInData = {
+    var checkOutData = {
       "employee_id": employeeId,
-      "date": DateFormat.yMMMd().format(now),
+      "dateTime": DateTime.now(),
+      'year': DateFormat.y().format(now),
+      "month": DateFormat.LLLL().format(now),
+      'week': calculateWeekOfMonth(),
+      'day': DateTime.now().weekday,
       "time": DateFormat.jm().format(now),
       "pic": checkOutImagePath,
       "emotion": null,
-      "status": onTimeStatus
     };
 
-    await firestore.collection('check_out_log').add(checkInData).then((value) {
+    await firestore.collection('check_out_log').add(checkOutData).then((value) {
       setState(() {
         refDocumentId = value.id;
       });
@@ -365,6 +383,30 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<int> calculateWeekOfMonth() async {
+    var now = new DateTime.now();
+    var day = DateFormat.d().format(now);
+    var dayOfWeek = now.weekday;
+    var countDayOfWeek = dayOfWeek + 1;
+
+    for (int i = int.parse(day); i >= 1; i--) {
+      countDayOfWeek = countDayOfWeek - 1;
+      if (countDayOfWeek == 0) countDayOfWeek = 7;
+    }
+    var findWeekCount = 1;
+    for (int i = 1; i <= int.parse(day); i++) {
+      countDayOfWeek = countDayOfWeek + 1;
+      if (countDayOfWeek == 8) {
+        findWeekCount++;
+        countDayOfWeek = 1;
+      }
+    }
+
+    print(findWeekCount);
+
+    return findWeekCount.toInt();
+  }
+
   getEmotion() {
     Navigator.of(context).push(PageRouteBuilder(
         opaque: false,
@@ -382,6 +424,13 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     initializeValueFromDatabase();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    initializeValueFromDatabase();
+    positionStreamTrack();
   }
 
   @override

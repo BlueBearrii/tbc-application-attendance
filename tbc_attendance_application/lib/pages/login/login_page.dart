@@ -43,7 +43,9 @@ class _LoginPageState extends State<LoginPage> {
         backgroundColor: Colors.white,
         body: SingleChildScrollView(
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 36),
+            padding: EdgeInsets.symmetric(
+              horizontal: 36,
+            ),
             child: Form(
               key: _formKey,
               child: Column(
@@ -161,7 +163,7 @@ class _LoginPageState extends State<LoginPage> {
                             )
                           : null),
                   Container(
-                    margin: EdgeInsets.symmetric(vertical: 50),
+                    margin: EdgeInsets.symmetric(vertical: 10),
                     child: SizedBox(
                       width: double.infinity,
                       height: 50,
