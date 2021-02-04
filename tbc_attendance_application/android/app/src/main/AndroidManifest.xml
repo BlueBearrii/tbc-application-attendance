@@ -10,6 +10,7 @@
         android:label="tbc_attendance_application"
         android:icon="@mipmap/ic_launcher"
         android:requestLegacyExternalStorage="true"
+        android:resizeableActivity="true"
         >
         <activity
             android:name=".MainActivity"
