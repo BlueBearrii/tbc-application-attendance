@@ -1,167 +1,68 @@
-import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dio/dio.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tbc_attendance_application/pages/app/home/emotion.dart';
-import 'package:tbc_attendance_application/pages/app/home/errorsStatus.dart';
 import 'package:timer_builder/timer_builder.dart';
 import 'package:http/http.dart' as http;
 
-class HomePage extends StatefulWidget {
-  HomePage({Key key}) : super(key: key);
+import 'emotion.dart';
 
+class HomePage extends StatefulWidget {
   @override
   _HomePageState createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  FirebaseFirestore firestore = FirebaseFirestore.instance;
+  CollectionReference identify =
+      FirebaseFirestore.instance.collection('identify_employee');
+
   FirebaseStorage storage = FirebaseStorage.instance;
-  // Instance value
+  var id;
+  var imagePath;
+  var name;
+  var imageFile;
+
+  var docId;
+
   static double kxBuildingLatitude = 13.720363;
   static double kxBuildingLongtitude = 100.498404;
 
-  // Initialze state value
-  var pictureProfile;
-  var checkIn;
-  var approveState;
-  var employeeId;
-  var username;
-  var announcement;
-  var onTimeStatus;
-  var refDocumentId;
+  var isButtonLoading = false;
 
-  // Image path url
-  var imagePath;
+  Future loadState() async {
+    var user = FirebaseAuth.instance.currentUser;
+    print("USER : $user");
 
-  // Active check in button
-  var enableCheckInButton = false;
-  var distance;
-  var isLoading = false;
-
-  // CheckIN&OUT value
-  var selfieFile;
-
-  Future logsTest() async {
-    print("Picture url : $pictureProfile");
-    print("Approve state : $approveState");
-    print("Check in state : $checkIn");
-    print("Enable check in button state : $enableCheckInButton");
-    print("Employee Id : $employeeId");
-    print("Username : $username");
-    print("Announcement : $announcement");
-  }
-
-  Future<bool> prepareState() async {
-    if (pictureProfile != null &&
-        checkIn != null &&
-        approveState != null &&
-        employeeId != null &&
-        username != null) {
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  Future initializeValueFromDatabase() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    imagePath = prefs.getString("pic");
-    employeeId = prefs.getString("employeeId");
-    username = prefs.getString("name");
-
-    await storage.ref(imagePath).getDownloadURL().then((imagePath) {
-      if (mounted) {
-        setState(() {
-          pictureProfile = imagePath;
-        });
-      }
-    });
-    await firestore
-        .collection('approve_state')
-        .doc(employeeId)
-        .get()
-        .then((_approveState) {
-      if (mounted) {
-        setState(() {
-          approveState = _approveState.data()["approveState"];
-        });
-      }
-    });
-    await firestore
-        .collection('check_in_state')
-        .doc(employeeId)
-        .get()
-        .then((_checkIn) {
-      if (mounted) {
-        setState(() {
-          checkIn = _checkIn.data()["checkIn"];
-        });
-      }
-    });
-    await firestore
-        .collection('announcement')
+    await FirebaseFirestore.instance
+        .collection("users_account")
+        .where("email", isEqualTo: user.email)
         .get()
         .then((QuerySnapshot querySnapshot) {
-      var messageBox = [];
-      querySnapshot.docs.forEach((doc) {
-        messageBox.add(doc["message"]);
+      querySnapshot.docs.forEach((element) {
+        id = element.data()["id"];
+        imagePath = element.data()["pic"];
+        name = element.data()["name"];
       });
-      if (mounted) {
-        setState(() {
-          announcement = messageBox;
+    }).then((value) {
+      FirebaseFirestore.instance
+          .collection("check_in_switch")
+          .where("id", isEqualTo: id)
+          .get()
+          .then((QuerySnapshot querySnapshot) {
+        querySnapshot.docs.forEach((element) {
+          setState(() {
+            docId = element.id;
+          });
         });
-      }
-    });
-  }
-
-  void onSetDistance() {
-    print("Distance : $distance");
-    if (distance <= 60) {
-      setState(() {
-        enableCheckInButton = true;
       });
-    } else {
-      setState(() {
-        enableCheckInButton = false;
-      });
-    }
-  }
-
-  Stream<dynamic> positionStreamTrack() {
-    var _getDistance;
-    void onData() {
-      //print("Distance : $_getDistance");
-      if (mounted) {
-        if (_getDistance <= 50) {
-          setState(() {
-            enableCheckInButton = true;
-          });
-        } else {
-          setState(() {
-            enableCheckInButton = false;
-          });
-        }
-      }
-    }
-
-    StreamSubscription<Position> positionStream = Geolocator.getPositionStream(
-            desiredAccuracy: LocationAccuracy.high,
-            intervalDuration: Duration(seconds: 10))
-        .listen((Position position) {
-      _getDistance = Geolocator.distanceBetween(position.latitude,
-          position.longitude, kxBuildingLatitude, kxBuildingLongtitude);
-
-      onData();
     });
   }
 
@@ -170,516 +71,605 @@ class _HomePageState extends State<HomePage> {
     return new DateFormat("jm").format(now);
   }
 
-  bool imageSwitchOnDayTime() {
-    var now = new DateTime.now();
-    if (new DateFormat("a").format(now) == "AM") {
+  Future setStateCheckIn(var state, var chengeState) async {
+    var documentId;
+    await FirebaseFirestore.instance
+        .collection("check_in_switch")
+        .where("id", isEqualTo: id)
+        .get()
+        .then((QuerySnapshot querySnapshot) {
+      querySnapshot.docs.forEach((element) {
+        print(element.data());
+        documentId = element.id;
+      });
+    }).then((value) async {
+      await FirebaseFirestore.instance
+          .collection("check_in_switch")
+          .doc(documentId)
+          .update({
+        "checkInSwitch": !state,
+        "checkInState": chengeState == "In" ? false : true,
+      });
+    }).then((value) {
+      setState(() {
+        isButtonLoading = false;
+      });
+    });
+  }
+
+  Future camera(ImageSource imageSource) async {
+    try {
+      var selfieImageFile = await ImagePicker.pickImage(source: imageSource);
+      setState(() {
+        imageFile = selfieImageFile;
+      });
       return true;
-    } else {
+    } catch (errors) {
       return false;
     }
   }
 
-  Future camara(ImageSource imageSource) async {
-    try {
-      var getFileSelfieImage = await ImagePicker.pickImage(source: imageSource);
-      setState(() {
-        selfieFile = getFileSelfieImage;
+  Future imageProcess() async {
+    var apiCompairURL = "https://faceapi-vistecbooking.cybertoryth.com/compare";
+
+    var loadURL;
+    var responseMessage;
+    File file;
+    await identify
+        .where("id", isEqualTo: id)
+        .get()
+        .then((QuerySnapshot querySnapshot) {
+      querySnapshot.docs.forEach((element) {
+        print(element.data());
+        imagePath = element.data()['pic'];
       });
-    } catch (errors) {}
+    }).then((value) async {
+      loadURL = await storage.ref(imagePath).getDownloadURL();
+      print(loadURL);
+    }).then((value) async {
+      var rng = new Random();
+      Directory tempDir = await getTemporaryDirectory();
+      String tempPath = tempDir.path;
+      file = new File('$tempPath' + (rng.nextInt(100)).toString() + '.png');
+      http.Response response = await http.get(loadURL);
+      await file.writeAsBytes(response.bodyBytes);
+      print(file);
+    }).then((value) async {
+      Response responsed;
+      Dio dio = new Dio();
+      FormData formData = new FormData.fromMap({
+        "source": await MultipartFile.fromFile(
+          imageFile.path,
+          filename: file.toString(),
+        ),
+        "target":
+            await MultipartFile.fromFile(file.path, filename: file.toString()),
+      });
+      responsed = await dio.post(apiCompairURL, data: formData);
+      print(responsed.data);
+
+      responseMessage = responsed.data;
+    });
+    return responseMessage;
   }
 
-  Future imageIdentify() async {
-    var status = false;
+  checkLateTime() {
+    var day = DateTime.now().day;
+    var month = DateTime.now().month;
+    var year = DateTime.now().year;
+    var hour = DateTime.now().hour;
+    var min = DateTime.now().minute;
 
-    Response responsed;
-    Dio dio = new Dio();
-    var imageIdentifyUrlPath =
-        await FirebaseStorage.instance.ref(imagePath).getDownloadURL();
+    var status;
 
-    // generate random number.
-    var rng = new Random();
-    // get temporary directory of device.
-    Directory tempDir = await getTemporaryDirectory();
-    // get temporary path from temporary directory.
-    String tempPath = tempDir.path;
-    // create a new file in temporary path with random file name.
-    File file = new File('$tempPath' + (rng.nextInt(100)).toString() + '.png');
-    // call http.get method and pass imageUrl into it to get response.
-    http.Response response = await http.get(imageIdentifyUrlPath);
-    // write bodyBytes received in response to file.
-    await file.writeAsBytes(response.bodyBytes);
-    // now return the file which is created with random name in
-    // temporary directory and image bytes from response is written to // that file.
-    print(file);
-    print(selfieFile);
+    print(DateTime(year, month, day, hour, min)
+        .compareTo(DateTime(year, month, day, 10, 30)));
 
-    var api = "https://faceapi-vistecbooking.cybertoryth.com/compare";
-
-    FormData formData = new FormData.fromMap({
-      "source": await MultipartFile.fromFile(
-        selfieFile.path,
-        filename: "Input.png",
-      ),
-      "target": await MultipartFile.fromFile(file.path, filename: "Target.png"),
-    });
-
-    responsed = await dio.post(api, data: formData);
-    print(responsed.data);
-
-    if (responsed.data["message"] == "Match!") status = true;
+    if (DateTime(year, month, day, hour, min)
+            .compareTo(DateTime(year, month, day, 10, 30)) ==
+        1) {
+      status = true;
+    } else {
+      status = false;
+    }
 
     return status;
   }
 
-  uploadSelfieImageFile() async {
-    print("Function upload selfie image file is running");
-    var imagePath =
-        "/$employeeId/${DateFormat.yMMMd().format(new DateTime.now())}.png";
-    await storage
-        .ref(checkIn ? "/check_out_image/" : "/check_in_image/")
-        .child(imagePath)
-        .putFile(selfieFile);
-  }
+  Future setCheckIn(var state) async {
+    var approve;
+    var ref = "check_in/$id/${DateTime.now().toIso8601String()}";
 
-  setCheckInState(bool checkInState) async {
-    await firestore
-        .collection('check_in_state')
-        .doc(employeeId)
-        .set({"checkIn": checkInState});
-  }
-
-  userCheckIn() async {
-    print("Function user check in is running");
-    var checkInImagePath =
-        "/check_in_image/$employeeId/${DateFormat.yMMMd().format(new DateTime.now())}.png";
-    var now = new DateTime.now();
-    var checkInData = {
-      "employeeId": employeeId,
-      "dateTime": DateTime.now(),
-      'year': DateFormat.y().format(now),
-      "month": DateFormat.LLLL().format(now),
-      'week': calculateWeekOfMonth(),
-      'day': DateTime.now().weekday,
-      "time": DateFormat.jm().format(now),
-      "pic": checkInImagePath,
-      "approve": approveState,
-      "late": onTimeStatus
-    };
-
-    await firestore.collection('check_in_log').add(checkInData).then((value) {
-      setCheckInState(true);
+    await FirebaseFirestore.instance
+        .collection('approve')
+        .where("id", isEqualTo: id)
+        .get()
+        .then((QuerySnapshot querySnapshot) {
+      querySnapshot.docs.forEach((element) {
+        approve = element.data()['approveState'];
+      });
+    }).then((value) async {
+      await FirebaseStorage.instance
+          .ref(ref)
+          .putFile(imageFile)
+          .then((value) async {
+        await FirebaseFirestore.instance.collection('check_in_log').add({
+          "id": id,
+          "day": DateTime.now().day,
+          "month": DateTime.now().month,
+          "year": DateTime.now().year,
+          "late": approve == true ? false : checkLateTime(),
+          'ref': ref,
+          "timeStamp": Timestamp.now()
+        }).then((value) {
+          print(value);
+          setStateCheckIn(state, "In");
+        });
+      });
     });
   }
 
-  userCheckOut() async {
-    print("Function user check out is running");
-    var checkOutImagePath =
-        "/check_out_image/$employeeId/${DateFormat.yMMMd().format(new DateTime.now())}.png";
-    var now = new DateTime.now();
-    var checkOutData = {
-      "employeeId": employeeId,
-      "dateTime": DateTime.now(),
-      'year': DateFormat.y().format(now),
-      "month": DateFormat.LLLL().format(now),
-      'week': calculateWeekOfMonth(),
-      'day': DateTime.now().weekday,
-      "time": DateFormat.jm().format(now),
-      "pic": checkOutImagePath,
-      "emotion": null,
-    };
+  Future setCheckOut(var state) async {
+    var day = DateTime.now().day;
+    var month = DateTime.now().month;
+    var year = DateTime.now().year;
+    var ref = "check_out/$id/${DateTime.now().toIso8601String()}";
 
-    await firestore.collection('check_out_log').add(checkOutData).then((value) {
-      setState(() {
-        refDocumentId = value.id;
+    var getCheckIn;
+    var documentId;
+
+    await FirebaseFirestore.instance
+        .collection("check_in_log")
+        .where("id", isEqualTo: id)
+        .where("day", isEqualTo: day)
+        .where("month", isEqualTo: month)
+        .where("year", isEqualTo: year)
+        .get()
+        .then((QuerySnapshot querySnapshot) {
+      querySnapshot.docs.forEach((element) {
+        print(element.data());
+        getCheckIn = element.data();
       });
-      setCheckInState(false);
-    });
-  }
-
-  timer(timeStatus) {
-    var now = new DateTime.now();
-    var hour = int.parse(DateFormat('h').format(now));
-    var min = int.parse(DateFormat('m').format(now));
-
-    if (timeStatus == "checkIn") {
-      if (imageSwitchOnDayTime()) {
-        if (hour >= 10) {
-          if (min > 30) {
-            setState(() {
-              onTimeStatus = true;
-            });
-          } else {
-            setState(() {
-              onTimeStatus = false;
-            });
-          }
-        } else {
-          setState(() {
-            onTimeStatus = false;
-          });
-        }
-      } else {
-        setState(() {
-          onTimeStatus = true;
-        });
-      }
-    } else {
-      if (imageSwitchOnDayTime() == false) {
-        if (hour <= 6) {
-          if (min < 30) {
-            setState(() {
-              onTimeStatus = "ahead of time";
-            });
-          } else {
-            setState(() {
-              onTimeStatus = "On time";
-            });
-          }
-        } else {
-          setState(() {
-            onTimeStatus = "On time";
-          });
-        }
-      } else {
-        setState(() {
-          onTimeStatus = "ahead of time";
-        });
-      }
-    }
-  }
-
-  onCheckInButtonOnPress() async {
-    print("Check in button pressed");
-    if (checkIn) {
-      timer("checkOut");
-      camara(ImageSource.camera).then((value) async {
-        if (await imageIdentify()) {
-          print("True");
-          await userCheckOut().then((value) async {
-            await uploadSelfieImageFile().then((value) {
-              getEmotion();
-              setState(() {
-                isLoading = false;
-              });
-            });
-          });
-        } else {
-          print("False");
-        }
-      });
-    } else {
-      timer("checkIn");
-      camara(ImageSource.camera).then((value) async {
-        if (await imageIdentify()) {
-          print("True");
-          await userCheckIn().then((value) async {
-            await uploadSelfieImageFile().then((value) {
-              setState(() {
-                isLoading = false;
-              });
-            });
-          });
-        } else {
+    }).then((value) async {
+      await FirebaseStorage.instance
+          .ref(ref)
+          .putFile(imageFile)
+          .then((value) async {
+        await FirebaseFirestore.instance.collection('check_out_log').add({
+          "id": id,
+          "day": getCheckIn["day"],
+          "month": getCheckIn["month"],
+          "year": getCheckIn["year"],
+          "late": getCheckIn['late'],
+          'checkInRef': getCheckIn['ref'],
+          'checkOutRef': ref,
+          "checkIntimeStamp": getCheckIn['timeStamp'],
+          "checkOutTimeStamp": Timestamp.now(),
+          'emoticon': null,
+        }).then((value) {
+          print(value);
+          documentId = value.id;
           Navigator.of(context).push(PageRouteBuilder(
               opaque: false,
-              pageBuilder: (BuildContext context, _, __) => ErrorStatus()));
-          setState(() {
-            isLoading = false;
-          });
-        }
+              pageBuilder: (BuildContext context, _, __) =>
+                  EmotionPage(documentId: documentId)));
+        }).then((value) {
+          setStateCheckIn(state, "Out");
+        });
       });
-    }
+    });
   }
 
-  int calculateWeekOfMonth() {
-    var now = new DateTime.now();
-    var day = DateFormat.d().format(now);
-    var dayOfWeek = now.weekday;
-    var countDayOfWeek = dayOfWeek + 1;
-
-    for (int i = int.parse(day); i >= 1; i--) {
-      countDayOfWeek = countDayOfWeek - 1;
-      if (countDayOfWeek == 0) countDayOfWeek = 7;
-    }
-    var findWeekCount = 1;
-    for (int i = 1; i <= int.parse(day); i++) {
-      countDayOfWeek = countDayOfWeek + 1;
-      if (countDayOfWeek == 8) {
-        findWeekCount++;
-        countDayOfWeek = 1;
-      }
-    }
-
-    print(findWeekCount);
-
-    return findWeekCount;
-  }
-
-  getEmotion() {
-    Navigator.of(context).push(PageRouteBuilder(
-        opaque: false,
-        pageBuilder: (BuildContext context, _, __) =>
-            EmotionPage(documentId: refDocumentId)));
-  }
-
-  _isLoadingFunction() {
-    return Center(
-      child: CircularProgressIndicator(),
+  Future<void> _showMyDialog() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Response'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text('Something wrong, please try again'),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Close'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
   @override
   void initState() {
+    // TODO: implement initState
     super.initState();
-    initializeValueFromDatabase();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-    initializeValueFromDatabase();
-    positionStreamTrack();
+    loadState();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: SingleChildScrollView(
-      child: Stack(
-        children: [customBackground(), app()],
-      ),
-    ));
-  }
-
-  Widget customBackground() {
-    return Container(
-      height: 200,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(10), bottomRight: Radius.circular(10)),
-        color: Theme.of(context).primaryColor,
-      ),
-    );
-  }
-
-  Widget app() {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 0),
-      child: Column(
-        children: [
-          profile(),
-          checkInButtonCard(),
-          announcementTitle(),
-          announcementCard()
-        ],
-      ),
-    );
+        backgroundColor: Theme.of(context).backgroundColor,
+        body: Container(
+          child: SingleChildScrollView(
+            child: Stack(children: [
+              Container(
+                width: double.infinity,
+                height: MediaQuery.of(context).size.height * 0.3,
+                decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor,
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    )),
+              ),
+              Column(
+                children: [
+                  profile(),
+                  cardCheckIn(),
+                  announcement(),
+                ],
+              ),
+            ]),
+          ),
+        ));
   }
 
   Widget profile() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 36),
-      child: Container(
-        margin: EdgeInsets.symmetric(vertical: 15),
-        child: Row(
-          children: [
-            Container(
-              margin: EdgeInsets.only(right: 15),
-              child: CircleAvatar(
-                backgroundColor: Colors.white,
-                radius: 35,
-                child: CircleAvatar(
-                  backgroundImage: pictureProfile != null
-                      ? NetworkImage(pictureProfile)
-                      : null,
-                  backgroundColor: Colors.white,
-                  radius: 30,
-                ),
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  username != null ? username : "Username",
-                  style: TextStyle(color: Colors.white),
-                ),
-                Text(
-                  employeeId != null ? "ID : $employeeId" : "Employee Id",
-                  style: TextStyle(color: Colors.white),
-                )
-              ],
-            )
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget checkInButtonCard() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 36),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 25),
-        width: double.infinity,
-        height: 300,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.all(Radius.circular(10)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              spreadRadius: 1.5,
-              blurRadius: 6,
-              offset: Offset(0, 3), // changes position of shadow
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Container(
-              margin: EdgeInsets.symmetric(vertical: 5),
-              child: Image.asset(
-                imageSwitchOnDayTime()
-                    ? "assets/dawn.png"
-                    : "assets/sunset.png",
-                width: 80,
-                height: 80,
-              ),
-            ),
-            Container(
-                margin: EdgeInsets.symmetric(vertical: 5),
-                child: Text(
-                  imageSwitchOnDayTime() ? "Good morning" : "Good evening",
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 25,
-                      color: imageSwitchOnDayTime()
-                          ? Color.fromRGBO(253, 208, 32, 1)
-                          : Colors.orange),
-                )),
-            Container(
-              margin: EdgeInsets.symmetric(vertical: 5),
-              child: TimerBuilder.periodic(Duration(seconds: 1),
-                  builder: (context) {
-                return Text(
-                  "${getSystemTime()}",
-                  style: TextStyle(
-                      color: Color.fromRGBO(61, 61, 61, 1),
-                      fontSize: 40,
-                      fontWeight: FontWeight.w700),
-                );
-              }),
-            ),
-            Container(
-              margin: EdgeInsets.symmetric(vertical: 10),
-              child: Text(
-                "${DateFormat.E().format(new DateTime.now()) + " " + DateFormat.d().format(new DateTime.now()) + " " + DateFormat.LLL().format(new DateTime.now()) + " " + DateFormat.y().format(new DateTime.now())}",
-                style: TextStyle(
-                    fontSize: 18, color: Color.fromRGBO(61, 61, 61, 1)),
-              ),
-            ),
-            isLoading ? _isLoadingFunction() : createCheckInButton()
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget createCheckInButton() {
-    return StreamBuilder(
-        stream: positionStreamTrack(),
-        builder: (context, snapshot) {
-          return Container(
+    return imagePath == null
+        ? LinearProgressIndicator()
+        : Container(
+            padding: EdgeInsets.symmetric(horizontal: 36),
+            margin: EdgeInsets.only(top: 20),
+            child: Container(
               width: double.infinity,
-              height: 50,
-              child: checkIn != null
-                  ? RaisedButton(
-                      onPressed: enableCheckInButton
-                          ? () {
-                              setState(() {
-                                isLoading = true;
-                              });
-                              onCheckInButtonOnPress();
-                            }
-                          : null,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            checkIn ? "CHECK OUT" : "CHECK IN",
+              child: FutureBuilder(
+                future:
+                    FirebaseStorage.instance.ref(imagePath).getDownloadURL(),
+                builder:
+                    (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
+                  print(snapshot.data);
+                  if (snapshot.data != null) {
+                    return Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: Colors.white,
+                          radius: MediaQuery.of(context).size.width * 0.08,
+                          child: CircleAvatar(
+                            radius: MediaQuery.of(context).size.width * 0.07,
+                            backgroundColor: Colors.white,
+                            backgroundImage: NetworkImage(snapshot.data),
                           ),
-                          Icon(Icons.login)
-                        ],
+                        ),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 10),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                name,
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              Text(
+                                id,
+                                style: TextStyle(color: Colors.white),
+                              )
+                            ],
+                          ),
+                        )
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: Colors.white,
+                        radius: MediaQuery.of(context).size.width * 0.08,
+                        child: CircleAvatar(
+                          radius: MediaQuery.of(context).size.width * 0.065,
+                          backgroundColor: Colors.white,
+                        ),
                       ),
-                      color: Theme.of(context).primaryColor,
-                      textColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    )
-                  : _isLoadingFunction());
-        });
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 10),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Loading ...",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            Container()
+                          ],
+                        ),
+                      )
+                    ],
+                  );
+                  ;
+                },
+              ),
+            ),
+          );
   }
 
-  Widget announcementTitle() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 36),
+  Widget cardCheckIn() {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 36),
+      width: double.infinity,
       child: Container(
-        margin: EdgeInsets.only(top: 30, bottom: 10),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            Container(
-                margin: EdgeInsets.only(right: 10),
-                child: Icon(
-                  Icons.info,
-                  color: Theme.of(context).primaryColor,
-                )),
-            Text("Announcement"),
-          ],
+        margin: EdgeInsets.symmetric(vertical: 10),
+        width: double.infinity,
+        height: MediaQuery.of(context).size.height * 0.38,
+        decoration: BoxDecoration(boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 2,
+            blurRadius: 1,
+            offset: Offset(0, 1),
+          )
+        ], borderRadius: BorderRadius.circular(10), color: Colors.white),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: Center(
+              child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [imageSwitchOnDayTime(), clock(), buttonSignIn()],
+          )),
         ),
       ),
     );
   }
 
-  Widget announcementCard() {
+  Widget realtimeLocation(var state) {
     return Container(
-        height: 250,
-        margin: EdgeInsets.only(bottom: 10),
-        padding: EdgeInsets.symmetric(
-          vertical: 10,
-        ),
-        child: announcement != null
-            ? ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: announcement.length,
-                itemBuilder: (BuildContext context, int index) =>
-                    SingleChildScrollView(
-                  child: Container(
-                    width: MediaQuery.of(context).size.width - 62,
-                    constraints: BoxConstraints(maxHeight: 180),
-                    margin: EdgeInsets.symmetric(horizontal: 10),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 10, horizontal: 15),
-                      child: Text("${announcement[index]}"),
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.all(Radius.circular(10)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          spreadRadius: 1.5,
-                          blurRadius: 6,
-                          offset: Offset(0, 3), // changes position of shadow
+      child: StreamBuilder(
+        stream: Geolocator.getPositionStream(
+            desiredAccuracy: LocationAccuracy.high,
+            intervalDuration: Duration(seconds: 10)),
+        builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
+          //print(snapshot.data);
+          if (snapshot.hasData) {
+            var position = snapshot.data;
+            var distance = Geolocator.distanceBetween(position.latitude,
+                position.longitude, kxBuildingLatitude, kxBuildingLongtitude);
+            print(distance);
+
+            return isButtonLoading == true
+                ? Center(child: CircularProgressIndicator())
+                : FutureBuilder(
+                    future: FirebaseFirestore.instance
+                        .collection("check_in_switch")
+                        .where("id", isEqualTo: id)
+                        .get()
+                        .then((value) {
+                      var data;
+                      value.docs.forEach((element) {
+                        data = element.data()['checkInState'];
+                      });
+                      return data;
+                    }),
+                    builder: (context, snapshot) {
+                      print(snapshot.data);
+                      return RaisedButton(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-              )
-            : _isLoadingFunction());
+                        color: Theme.of(context).primaryColor,
+                        onPressed: distance > 60 || snapshot.data == true
+                            ? null
+                            : () {
+                                setState(() {
+                                  isButtonLoading = true;
+                                });
+                                print(state);
+                                camera(ImageSource.camera).then((value) async {
+                                  print("Camera : $value");
+                                  if (imageFile != null) {
+                                    await imageProcess().then((value) {
+                                      print(value['message']);
+                                      if (value['message'] == "Match!") {
+                                        state == true
+                                            ? setCheckOut(state)
+                                            : setCheckIn(state);
+                                      } else {
+                                        _showMyDialog();
+                                        setState(() {
+                                          isButtonLoading = false;
+                                        });
+                                      }
+                                    });
+                                  } else {
+                                    setState(() {
+                                      isButtonLoading = false;
+                                    });
+                                  }
+                                });
+                              },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              state == false ? "Check In" : "Check Out",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            Container(
+                              margin: EdgeInsets.only(left: 10),
+                              child: Icon(
+                                state == false ? Icons.login : Icons.logout,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    });
+          }
+          return Container();
+        },
+      ),
+    );
+  }
+
+  Widget buttonSignIn() {
+    return docId == null
+        ? CircularProgressIndicator()
+        : Container(
+            margin: EdgeInsets.symmetric(vertical: 15),
+            width: double.infinity,
+            height: 50,
+            child: StreamBuilder(
+              stream: FirebaseFirestore.instance
+                  .collection("check_in_switch")
+                  .doc(docId)
+                  .snapshots(),
+              builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
+                if (snapshot.hasData &&
+                    snapshot.data != null &&
+                    snapshot.connectionState == ConnectionState.active) {
+                  return realtimeLocation(snapshot.data['checkInSwitch']);
+                }
+                return Center(
+                  child: CircularProgressIndicator(),
+                );
+              },
+            ),
+          );
+  }
+
+  Widget imageSwitchOnDayTime() {
+    var now = new DateTime.now();
+    if (new DateFormat("a").format(now) == "AM") {
+      return Column(
+        children: [
+          Image.asset(
+            "assets/dawn.png",
+            width: MediaQuery.of(context).size.width * 0.2,
+          ),
+          Text(
+            "Good morning",
+            style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 25,
+                color: Color.fromRGBO(253, 208, 32, 1)),
+          )
+        ],
+      );
+    } else {
+      return Column(
+        children: [
+          Image.asset(
+            "assets/sunset.png",
+            width: MediaQuery.of(context).size.width * 0.2,
+          ),
+          Text(
+            "Good afternoon",
+            style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 25,
+                color: Colors.orange),
+          ),
+        ],
+      );
+    }
+  }
+
+  Widget clock() {
+    return Column(
+      children: [
+        Container(
+          margin: EdgeInsets.symmetric(vertical: 5),
+          child:
+              TimerBuilder.periodic(Duration(seconds: 1), builder: (context) {
+            return Text(
+              "${getSystemTime()}",
+              style: TextStyle(
+                  color: Color.fromRGBO(61, 61, 61, 1),
+                  fontSize: 40,
+                  fontWeight: FontWeight.w700),
+            );
+          }),
+        ),
+        Container(
+          margin: EdgeInsets.symmetric(vertical: 10),
+          child: Text(
+            "${DateFormat.E().format(new DateTime.now()) + " " + DateFormat.d().format(new DateTime.now()) + " " + DateFormat.LLL().format(new DateTime.now()) + " " + DateFormat.y().format(new DateTime.now())}",
+            style:
+                TextStyle(fontSize: 18, color: Color.fromRGBO(61, 61, 61, 1)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget announcement() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 36),
+          child: Text("Announcement"),
+        ),
+        Container(
+          height: MediaQuery.of(context).size.width * 0.6,
+          width: double.infinity,
+          child: FutureBuilder(
+            initialData: [],
+            future: FirebaseFirestore.instance
+                .collection('announcement')
+                .get()
+                .then((QuerySnapshot querySnapshot) {
+              var arr = [];
+              querySnapshot.docs.forEach((element) {
+                arr.add(element.data());
+              });
+              return arr;
+            }),
+            builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
+              print(snapshot.data.length);
+              if (snapshot.data != null) {
+                return ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    shrinkWrap: true,
+                    itemCount: snapshot.data.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      return Container(
+                        height: MediaQuery.of(context).size.width * 0.6,
+                        width: MediaQuery.of(context).size.width * 0.8,
+                        padding: EdgeInsets.only(left: 36, top: 10, bottom: 10),
+                        child: Container(
+                          padding:
+                              EdgeInsets.only(left: 10, right: 10, top: 10),
+                          decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withOpacity(0.1),
+                                  spreadRadius: 2,
+                                  blurRadius: 1,
+                                  offset: Offset(0, 1),
+                                )
+                              ]),
+                          child: Text(snapshot.data[index]['message']),
+                        ),
+                      );
+                    });
+              }
+              return CircularProgressIndicator();
+            },
+          ),
+        ),
+      ],
+    );
   }
 }

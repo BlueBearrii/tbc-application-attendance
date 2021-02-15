@@ -8,13 +8,12 @@ class EmotionPage extends StatelessWidget {
   const EmotionPage({Key key, @required this.documentId}) : super(key: key);
 
   setEmotion(number) async {
-    print(documentId);
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    var employeeId = prefs.getString("employeeId");
-    FirebaseFirestore.instance
-        .collection('check_out_log')
+    await FirebaseFirestore.instance
+        .collection("check_out_log")
         .doc(documentId)
-        .update({"emotion": number});
+        .update({"emoticon": number}).then((value) {
+      print("Update done");
+    });
   }
 
   @override

@@ -1,17 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
 
-class HistoryPage extends StatefulWidget {
+class MemberHistory extends StatefulWidget {
+  final String id;
+  const MemberHistory({Key key, @required this.id}) : super(key: key);
   @override
-  _HistoryPageState createState() => _HistoryPageState();
+  _MemberHistoryState createState() => _MemberHistoryState(id);
 }
 
-class _HistoryPageState extends State<HistoryPage> {
+class _MemberHistoryState extends State<MemberHistory> {
+  var id;
+  _MemberHistoryState(this.id);
   CalendarController _calendarController;
   CalendarController _initialCalendarControler1;
   CalendarController _initialCalendarControler2;
@@ -46,7 +49,6 @@ class _HistoryPageState extends State<HistoryPage> {
   String dropdownValue = DateTime.now().year.toString();
   String dropdownMonthValue = DateFormat.MMM().format(new DateTime.now());
 
-  var id;
   var selectMonth = DateTime.now().month;
   var emoStatics = [0.0, 0.0, 0.0, 0.0, 0.0];
   var emoStaticsYear = [0.0, 0.0, 0.0, 0.0, 0.0];
@@ -59,6 +61,7 @@ class _HistoryPageState extends State<HistoryPage> {
   var firstPage = true;
 
   initialId() async {
+    print(id);
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
     List<String> yearArr = [];
@@ -84,7 +87,6 @@ class _HistoryPageState extends State<HistoryPage> {
 
     if (mounted) {
       setState(() {
-        id = prefs.get("id");
         yearLists = yearArr;
         controllersList = arrController;
       });
@@ -92,11 +94,10 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Future emotionStatic() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
     var _absent = 0;
     return await FirebaseFirestore.instance
         .collection("check_out_log")
-        .where("id", isEqualTo: prefs.get("id"))
+        .where("id", isEqualTo: id)
         .where("year", isEqualTo: int.parse(dropdownValue))
         .where("month", isEqualTo: selectMonth)
         .get()
@@ -131,22 +132,20 @@ class _HistoryPageState extends State<HistoryPage> {
         var day = DateTime(int.parse(dropdownValue), selectMonth, i).weekday;
         if (day == 6 || day == 7) weekdayCount = weekdayCount + 1;
       }
-      if (mounted) {
-        setState(() {
-          emoStatics = arr;
-          lateTime = _lateTime;
-          absent = dayCount - weekdayCount - _absent;
-        });
-      }
+
+      setState(() {
+        emoStatics = arr;
+        lateTime = _lateTime;
+        absent = dayCount - weekdayCount - _absent;
+      });
     });
   }
 
   Future emotionStaticYear() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
     var _absent = 0;
     return await FirebaseFirestore.instance
         .collection("check_out_log")
-        .where("id", isEqualTo: prefs.get("id"))
+        .where("id", isEqualTo: id)
         .where("year", isEqualTo: int.parse(dropdownValue))
         .get()
         .then((QuerySnapshot querySnapshot) {
@@ -184,13 +183,11 @@ class _HistoryPageState extends State<HistoryPage> {
       print(DateTime(int.parse(dropdownValue), 1, 33).weekday);
       print("dayCount : $weekdayCount");
 
-      if (mounted) {
-        setState(() {
-          emoStaticsYear = arr;
-          lateTimeYear = _lateTime;
-          absentYear = dayCount - weekdayCount - _absent;
-        });
-      }
+      setState(() {
+        emoStaticsYear = arr;
+        lateTimeYear = _lateTime;
+        absentYear = dayCount - weekdayCount - _absent;
+      });
     });
   }
 
@@ -240,28 +237,13 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   void dispose() {
     _calendarController.dispose();
-    _initialCalendarControler1.dispose();
-    _initialCalendarControler2.dispose();
-    _initialCalendarControler3.dispose();
-    _initialCalendarControler4.dispose();
-    _initialCalendarControler5.dispose();
-    _initialCalendarControler6.dispose();
-    _initialCalendarControler7.dispose();
-    _initialCalendarControler8.dispose();
-    _initialCalendarControler9.dispose();
-    _initialCalendarControler10.dispose();
-    _initialCalendarControler11.dispose();
-    _initialCalendarControler12.dispose();
-    initialId();
-    fetchDataForYear();
-    emotionStatic();
-    emotionStaticYear();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+        appBar: AppBar(),
         backgroundColor: Theme.of(context).backgroundColor,
         body: SingleChildScrollView(
             child: Column(
@@ -909,7 +891,9 @@ class _HistoryPageState extends State<HistoryPage> {
               );
             }
           }
-          return Container();
+          return Center(
+            child: CircularProgressIndicator(),
+          );
         },
       ),
     );

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tbc_attendance_application/pages/app/manager/memberHistory.dart';
 
 class ManagerApprove extends StatefulWidget {
   @override
@@ -14,14 +15,18 @@ class _ManagerApproveState extends State<ManagerApprove> {
   CollectionReference allUser =
       FirebaseFirestore.instance.collection('identify_employee');
   CollectionReference approve =
-      FirebaseFirestore.instance.collection('approve_state');
+      FirebaseFirestore.instance.collection('approve');
 
   var employeeId;
   var keyword = "";
 
   void setInitialState() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    employeeId = prefs.getString("employeeId");
+    if (mounted) {
+      setState(() {
+        employeeId = prefs.getString("id");
+      });
+    }
   }
 
   Future loadMember() async {
@@ -39,7 +44,7 @@ class _ManagerApproveState extends State<ManagerApprove> {
       await approve.get().then((QuerySnapshot querySnapshot) {
         querySnapshot.docs.forEach((element) {
           for (int i = 0; i < memberArray.length; i++) {
-            if (element.id == memberArray[i]['id']) {
+            if (element.data()["id"] == memberArray[i]['id']) {
               newMemberArray.add(memberArray[i]);
             }
           }
@@ -47,8 +52,8 @@ class _ManagerApproveState extends State<ManagerApprove> {
       });
     });
 
-    //print(memberArray);
-    //print(newMemberArray);
+    print(memberArray);
+    print(newMemberArray);
 
     return newMemberArray;
   }
@@ -75,7 +80,7 @@ class _ManagerApproveState extends State<ManagerApprove> {
           await approve.get().then((QuerySnapshot querySnapshot) {
             querySnapshot.docs.forEach((element) {
               for (int i = 0; i < memberArray.length; i++) {
-                if (element.id == memberArray[i]['id']) {
+                if (element.data()["id"] == memberArray[i]['id']) {
                   newMemberArray.add(memberArray[i]);
                 }
               }
@@ -93,20 +98,32 @@ class _ManagerApproveState extends State<ManagerApprove> {
     return FirebaseStorage.instance.ref(refUrl).getDownloadURL();
   }
 
-  getApproveState() async {
+  setApproveState(var value, var id) async {
+    print("Update");
     await approve
-        .doc("A003")
+        .where("id", isEqualTo: id)
         .get()
-        .then((value) => print(value.data()['approveState']));
+        .then((QuerySnapshot querySnapshot) {
+      querySnapshot.docs.forEach((element) async {
+        //print(element.data());
+        await approve.doc(element.id).update({"approveState": value});
+      });
+    });
   }
 
-  setApproveState(var docId, var value) async {
-    await FirebaseFirestore.instance
-        .collection('approve_state')
-        .doc(docId)
-        .update({"approveState": value}).then((value) {
-      print("Status updated");
+  approveStateListener(var snapshot) async {
+    var data;
+    await approve
+        .where("id", isEqualTo: snapshot)
+        .get()
+        .then((QuerySnapshot querySnapshot) {
+      querySnapshot.docs.forEach((element) {
+        print(element.data()["approveState"]);
+        data = element.data()["approveState"];
+      });
     });
+
+    return data;
   }
 
   @override
@@ -167,7 +184,7 @@ class _ManagerApproveState extends State<ManagerApprove> {
                 stream: users.snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.active) {
-                    return renderCard(snapshot);
+                    if (snapshot.hasData) return renderCard(snapshot);
                   }
                   return LinearProgressIndicator();
                 })
@@ -183,39 +200,51 @@ class _ManagerApproveState extends State<ManagerApprove> {
         builder: ((BuildContext context, AsyncSnapshot<dynamic> snapshot) {
           print(snapshot.connectionState);
           if (snapshot.connectionState == ConnectionState.done) {
-            return ListView.builder(
-                physics: const NeverScrollableScrollPhysics(),
-                shrinkWrap: true,
-                itemCount: snapshot.data.length,
-                itemBuilder: (BuildContext context, int index) => Container(
-                      margin: EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                          border: Border.all(width: 0.25),
-                          borderRadius: BorderRadius.all(Radius.circular(10))),
-                      child: Row(
-                        children: [
-                          Container(
-                              padding: EdgeInsets.all(10),
-                              child: CircleAvatar(
-                                backgroundImage: snapshot.data[index]['data']
-                                            ['path'] ==
-                                        null
-                                    ? null
-                                    : NetworkImage(
-                                        snapshot.data[index]['data']['path']),
-                              )),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+            if (snapshot.hasData)
+              return ListView.builder(
+                  physics: const NeverScrollableScrollPhysics(),
+                  shrinkWrap: true,
+                  itemCount: snapshot.data.length,
+                  itemBuilder: (BuildContext context, int index) =>
+                      GestureDetector(
+                        onLongPress: () {
+                          Navigator.of(context).push(PageRouteBuilder(
+                              opaque: false,
+                              pageBuilder: (BuildContext context, _, __) =>
+                                  MemberHistory(
+                                      id: snapshot.data[index]['data']['id'])));
+                        },
+                        child: Container(
+                          margin: EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                              border: Border.all(width: 0.25),
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(10))),
+                          child: Row(
                             children: [
-                              Text(snapshot.data[index]['data']['name']),
-                              Text(snapshot.data[index]['data']['id'])
+                              Container(
+                                  padding: EdgeInsets.all(10),
+                                  child: CircleAvatar(
+                                    backgroundImage: snapshot.data[index]
+                                                ['data']['path'] ==
+                                            null
+                                        ? null
+                                        : NetworkImage(snapshot.data[index]
+                                            ['data']['path']),
+                                  )),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(snapshot.data[index]['data']['name']),
+                                  Text(snapshot.data[index]['data']['id'])
+                                ],
+                              ),
+                              Expanded(flex: 1, child: Container()),
+                              Container(child: renderToggle(snapshot, index))
                             ],
                           ),
-                          Expanded(flex: 1, child: Container()),
-                          Container(child: renderToggle(snapshot, index))
-                        ],
-                      ),
-                    ));
+                        ),
+                      ));
           }
           return Center(
             child: CircularProgressIndicator(),
@@ -225,15 +254,16 @@ class _ManagerApproveState extends State<ManagerApprove> {
 
   Widget renderToggle(snapshot, index) {
     return StreamBuilder(
-        stream: approve.doc(snapshot.data[index]['id']).snapshots(),
+        stream: approve.doc(snapshot.data[index]['data']['id']).snapshots(),
         builder: (context, snapshotToggle) {
           if (snapshotToggle.connectionState == ConnectionState.active) {
-            var valueData = snapshotToggle.data['approveState'];
-            return Switch(
-                value: valueData,
-                onChanged: (value) {
-                  setApproveState(snapshot.data[index]['id'], value);
-                });
+            if (snapshotToggle != null) {
+              return Switch(
+                  value: snapshotToggle.data['approveState'],
+                  onChanged: (value) {
+                    setApproveState(value, snapshot.data[index]['id']);
+                  });
+            }
           }
 
           return Container();
