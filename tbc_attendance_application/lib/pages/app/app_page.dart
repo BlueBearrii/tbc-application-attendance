@@ -1,10 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tbc_attendance_application/pages/app/feedback/feedback.dart';
 import 'package:tbc_attendance_application/pages/app/history/history.dart';
 import 'package:tbc_attendance_application/pages/app/home/home.dart';
-import 'package:tbc_attendance_application/pages/app/home/newHome.dart';
 
 class Application extends StatefulWidget {
   const Application({Key key}) : super(key: key);
@@ -17,9 +17,8 @@ class _ApplicationState extends State<Application> {
 /* -------------------------------------------------------------------------- */
 /*                                  Variable                                  */
 /* -------------------------------------------------------------------------- */
-
   int _selectedIndex = 0;
-  bool manager;
+  var isManager = false;
 
 /* -------------------------------------------------------------------------- */
 /*                                  Function                                  */
@@ -37,17 +36,31 @@ class _ApplicationState extends State<Application> {
     }
   }
 
-  setManagerState() async {
+  setId() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      manager = prefs.getBool("manager");
+    var email = FirebaseAuth.instance.currentUser.email;
+    await FirebaseFirestore.instance
+        .collection('users_account')
+        .where("email", isEqualTo: email)
+        .get()
+        .then((QuerySnapshot querySnapshot) {
+      querySnapshot.docs.forEach((element) {
+        print(element.data());
+        prefs.setString("id", element.data()["id"]);
+        prefs.setString("name", element.data()["name"]);
+        setState(() {
+          isManager = element.data()["manager"];
+        });
+      });
     });
+
+    print("setId : ${prefs.get("id")}");
   }
 
   @override
   void initState() {
     super.initState();
-    setManagerState();
+    setId();
   }
 
   @override
@@ -70,9 +83,11 @@ class _ApplicationState extends State<Application> {
           if (value == 2) {
             Navigator.of(context).pushNamed("/term_condition");
           }
-          setState(() {
-            _selectedIndex = value;
-          });
+          if (value != _selectedIndex) {
+            setState(() {
+              _selectedIndex = value;
+            });
+          }
         },
         items: [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
@@ -96,13 +111,23 @@ class _ApplicationState extends State<Application> {
                 children: [
                   Container(
                       margin: EdgeInsets.only(right: 10),
-                      child: Icon(Icons.verified_user)),
-                  Text('Manager'),
+                      child: Icon(
+                        Icons.verified_user,
+                        color: isManager == false ? Colors.grey : Colors.black,
+                      )),
+                  Text(
+                    'Manager',
+                    style: TextStyle(
+                      color: isManager == false ? Colors.grey : Colors.black,
+                    ),
+                  )
                 ],
               ),
-              onTap: () {
-                Navigator.of(context).pushNamed("/manager_approve");
-              },
+              onTap: isManager == false
+                  ? null
+                  : () {
+                      Navigator.of(context).pushNamed("/manager_approve");
+                    },
             ),
             ListTile(
               title: Row(
@@ -128,9 +153,17 @@ class _ApplicationState extends State<Application> {
                 ],
               ),
               onTap: () async {
-                await FirebaseAuth.instance.signOut();
-                Navigator.of(context).pushNamedAndRemoveUntil(
-                    '/login', (Route<dynamic> route) => false);
+                SharedPreferences prefs = await SharedPreferences.getInstance();
+                await prefs.remove("id").then((value) async {
+                  print(value);
+                  await prefs.remove("id");
+                }).then((value) async {
+                  print(value);
+                  await FirebaseAuth.instance.signOut();
+                }).then((value) {
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                      '/login', (Route<dynamic> route) => false);
+                });
               },
             ),
           ],

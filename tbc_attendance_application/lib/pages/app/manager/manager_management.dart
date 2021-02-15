@@ -22,7 +22,11 @@ class _ManagerManagementState extends State<ManagerManagement> {
 
   void setInitialState() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    employeeId = prefs.getString("employeeId");
+    if (mounted) {
+      setState(() {
+        employeeId = prefs.getString("id");
+      });
+    }
   }
 
   Future loadMember() async {

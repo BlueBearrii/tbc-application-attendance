@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FeedbackPage extends StatefulWidget {
   const FeedbackPage({Key key}) : super(key: key);
@@ -15,6 +16,8 @@ class _FeedbackPageState extends State<FeedbackPage> {
   final _formKey = GlobalKey<FormState>();
 
   Future fetchEmployeeLists() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    var name = prefs.getString("name");
     await FirebaseFirestore.instance
         .collection('identify_employee')
         .get()
@@ -22,9 +25,11 @@ class _FeedbackPageState extends State<FeedbackPage> {
       querySnapshot.docs.forEach((doc) {
         print(doc.data()['name']);
         if (mounted) {
-          setState(() {
-            initialRecieverLists.add(doc.data()['name'].toString());
-          });
+          if (name != doc.data()['name']) {
+            setState(() {
+              initialRecieverLists.add(doc.data()['name'].toString());
+            });
+          }
         }
       });
     });

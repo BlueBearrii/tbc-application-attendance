@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -9,101 +9,118 @@ class FeedbackBox extends StatefulWidget {
 }
 
 class _FeedbackBoxState extends State<FeedbackBox> {
-  var feedback = [];
-  var username;
-  Future _loadFeedbackMessage() async {
+  var name;
+
+  Future loadState() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    username = prefs.getString("name");
-
-    await FirebaseFirestore.instance
-        .collection('feedback')
-        .orderBy("timestamp")
-        .get()
-        .then((QuerySnapshot querySnapshot) {
-      var data = [];
-      querySnapshot.docs.forEach((doc) {
-        if (doc.data()["name"] == username) {
-          data.add(doc.data()['message']);
-        }
-      });
-      setState(() {
-        feedback = data;
-      });
-
-      print(feedback);
+    setState(() {
+      name = prefs.getString("name");
     });
+
+    print(name);
   }
 
   @override
   void initState() {
     // TODO: implement initState
-    _loadFeedbackMessage();
+    super.initState();
+    loadState();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         backgroundColor: Theme.of(context).backgroundColor,
-        appBar: AppBar(
-          elevation: 0,
-        ),
+        appBar: AppBar(),
         body: Container(
-          padding: EdgeInsets.symmetric(horizontal: 15),
-          child: ListView.builder(
-              scrollDirection: Axis.vertical,
-              itemCount: feedback.length,
-              itemBuilder: (BuildContext context, int index) => Container(
-                    constraints: BoxConstraints(minHeight: 70),
-                    margin: EdgeInsets.only(top: 10),
-                    width: double.infinity,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                            width: 50,
-                            child: CircleAvatar(
-                              child: Center(
-                                child: Icon(Icons.person),
-                              ),
-                            )),
-                        Column(
+          width: double.infinity,
+          child: FutureBuilder(
+            future: FirebaseFirestore.instance
+                .collection("feedback")
+                .where("name", isEqualTo: name)
+                .get()
+                .then((QuerySnapshot querySnapshot) {
+              var arr = [];
+              querySnapshot.docs.forEach((element) {
+                arr.add(element.data());
+              });
+              return arr;
+            }),
+            builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
+              print(snapshot.data);
+
+              if (snapshot.hasData) {
+                return ListView.builder(
+                    itemCount: snapshot.data.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      return Container(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              children: [
-                                Container(child: Text("TBC bot messanger"))
-                              ],
-                            ),
-                            Row(children: [
-                              Container(
-                                  padding: EdgeInsets.all(10),
-                                  margin: EdgeInsets.symmetric(vertical: 5),
-                                  constraints: BoxConstraints(
-                                    maxWidth:
-                                        MediaQuery.of(context).size.width * 0.7,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius:
-                                        BorderRadius.all(Radius.circular(10)),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.05),
-                                        spreadRadius: 1.5,
-                                        blurRadius: 6,
-                                        offset: Offset(
-                                            0, 3), // changes position of shadow
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 10),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  CircleAvatar(
+                                    radius: MediaQuery.of(context).size.width *
+                                        0.05,
+                                    backgroundColor:
+                                        Theme.of(context).primaryColor,
+                                    child: CircleAvatar(
+                                      radius:
+                                          MediaQuery.of(context).size.width *
+                                              0.042,
+                                      backgroundColor: Colors.white,
+                                      child: Center(
+                                        child: Icon(
+                                          Icons.admin_panel_settings,
+                                          color: Theme.of(context).primaryColor,
+                                        ),
                                       ),
-                                    ],
-                                  ),
-                                  child: Text(feedback[index]))
-                            ]),
+                                    ),
+                                  )
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                      padding: EdgeInsets.only(bottom: 5),
+                                      child: Text("tbc bot")),
+                                  Container(
+                                      width: double.infinity,
+                                      decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color:
+                                                  Colors.grey.withOpacity(0.1),
+                                              spreadRadius: 2,
+                                              blurRadius: 1,
+                                              offset: Offset(0, 1),
+                                            )
+                                          ]),
+                                      padding: EdgeInsets.all(5),
+                                      child: Text(
+                                          snapshot.data[index]['message'])),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
-                      ],
-                    ),
-                  )),
+                      );
+                    });
+              }
+              return LinearProgressIndicator();
+            },
+          ),
         ));
   }
 }

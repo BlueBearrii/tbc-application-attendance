@@ -1,8 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tbc_attendance_application/pages/app/app_page.dart';
 import 'package:tbc_attendance_application/pages/app/feedback/term_condition.dart';
 import 'package:tbc_attendance_application/pages/app/feedback_box/feedback_box.dart';
@@ -15,33 +13,15 @@ import 'package:tbc_attendance_application/pages/register/register_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SharedPreferences prefs = await SharedPreferences.getInstance();
   await Firebase.initializeApp()
       .then((value) => print("Firebase initialize success"));
 
-  if (FirebaseAuth.instance.currentUser != null) {
-    await FirebaseFirestore.instance
-        .collection('users')
-        .get()
-        .then((QuerySnapshot querySnapshot) => {
-              querySnapshot.docs.forEach((doc) {
-                if (doc["email"] == FirebaseAuth.instance.currentUser.email) {
-                  prefs.setString("employeeId", doc.data()['employeeId']);
-                  prefs.setString("name", doc.data()['name']);
-                  prefs.setString("pic", doc.data()['pic']);
-                  prefs.setBool("manager", doc.data()['manager']);
-                  prefs.setString(
-                      "email", FirebaseAuth.instance.currentUser.email);
-                  prefs.setString("uid", FirebaseAuth.instance.currentUser.uid);
-                }
-              })
-            });
+  Stream currentUser() async* {
+    var user = FirebaseAuth.instance.currentUser;
+    yield user;
   }
-
-  User user = FirebaseAuth.instance.currentUser;
   //print(user);
   //
-  print(prefs.get("email"));
 
   runApp(MaterialApp(
       theme: ThemeData(
@@ -63,5 +43,32 @@ void main() async {
         '/manager_approve': (context) => ManagerApprove(),
         '/manager_management': (context) => ManagerManagement()
       },
-      home: user != null ? Application() : LoginPage()));
+      home: StreamBuilder(
+        stream: currentUser(),
+        builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
+          switch (snapshot.connectionState) {
+            case ConnectionState.none:
+              // TODO: Handle this case.
+              break;
+            case ConnectionState.waiting:
+              return Center(
+                child:
+                    Scaffold(body: Center(child: CircularProgressIndicator())),
+              );
+              break;
+            case ConnectionState.active:
+              // TODO: Handle this case.
+              break;
+            case ConnectionState.done:
+              if (snapshot.data == null) {
+                return LoginPage();
+              } else {
+                return Application();
+              }
+          }
+          return Center(
+            child: Scaffold(body: Center(child: CircularProgressIndicator())),
+          );
+        },
+      )));
 }

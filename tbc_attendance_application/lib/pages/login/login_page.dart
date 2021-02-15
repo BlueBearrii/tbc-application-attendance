@@ -17,19 +17,18 @@ class _LoginPageState extends State<LoginPage> {
   bool isLoading = false;
 
   // Show password&confirm toggle
-  bool _passwordHide = true;
+  bool passwordHide = true;
 
   Future onLoginSubmit() async {
     await auth
         .signInWithEmailAndPassword(email: _email, password: _password)
         .then((value) {
-      setState(() {
-        isLoading = false;
-        _authError = false;
-      });
+      print(value);
       Navigator.of(context)
           .pushNamedAndRemoveUntil('/app', (Route<dynamic> route) => false);
+      print(value);
     }).catchError((onError) {
+      print("Error : $onError");
       setState(() {
         isLoading = false;
         _authError = true;
@@ -97,6 +96,12 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                               borderSide:
                                   BorderSide(color: Colors.red, width: 1.0)),
+                          focusedErrorBorder: OutlineInputBorder(
+                              borderRadius: const BorderRadius.all(
+                                Radius.circular(10.0),
+                              ),
+                              borderSide:
+                                  BorderSide(color: Colors.red, width: 1.0)),
                           hintText: 'Email address'),
                     ),
                   ),
@@ -110,7 +115,7 @@ class _LoginPageState extends State<LoginPage> {
                         return null;
                       },
                       keyboardType: TextInputType.text,
-                      obscureText: _passwordHide,
+                      obscureText: passwordHide,
                       onChanged: (value) {
                         setState(() {
                           _password = value;
@@ -124,7 +129,7 @@ class _LoginPageState extends State<LoginPage> {
                           suffixIcon: GestureDetector(
                             onTap: () {
                               setState(() {
-                                _passwordHide = !_passwordHide;
+                                passwordHide = !passwordHide;
                               });
                             },
                             child: Icon(
@@ -152,6 +157,12 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                               borderSide:
                                   BorderSide(color: Colors.red, width: 1.0)),
+                          focusedErrorBorder: OutlineInputBorder(
+                              borderRadius: const BorderRadius.all(
+                                Radius.circular(10.0),
+                              ),
+                              borderSide:
+                                  BorderSide(color: Colors.red, width: 1.0)),
                           hintText: 'Enter password'),
                     ),
                   ),
@@ -167,31 +178,29 @@ class _LoginPageState extends State<LoginPage> {
                     child: SizedBox(
                       width: double.infinity,
                       height: 50,
-                      child: RaisedButton(
-                        color: Color.fromRGBO(48, 49, 145, 1),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10.0)),
-                        onPressed: () async {
-                          print(isLoading);
-                          setState(() {
-                            isLoading = true;
-                          });
-                          _formKey.currentState.validate();
-                          if (_formKey.currentState.validate()) {
-                            print(isLoading);
-                            onLoginSubmit();
-                          }
-                        },
-                        child: isLoading
-                            ? Center(
-                                child: CircularProgressIndicator(),
-                              )
-                            : Text(
+                      child: isLoading
+                          ? Center(
+                              child: CircularProgressIndicator(),
+                            )
+                          : RaisedButton(
+                              color: Color.fromRGBO(48, 49, 145, 1),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10.0)),
+                              onPressed: () async {
+                                _formKey.currentState.validate();
+                                if (_formKey.currentState.validate()) {
+                                  setState(() {
+                                    isLoading = true;
+                                  });
+                                  onLoginSubmit();
+                                }
+                              },
+                              child: Text(
                                 "Login",
                                 style: TextStyle(
                                     color: Colors.white, fontSize: 14.0),
                               ),
-                      ),
+                            ),
                     ),
                   ),
                   Row(
