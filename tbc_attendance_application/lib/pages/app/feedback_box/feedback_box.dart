@@ -31,7 +31,9 @@ class _FeedbackBoxState extends State<FeedbackBox> {
   Widget build(BuildContext context) {
     return Scaffold(
         backgroundColor: Theme.of(context).backgroundColor,
-        appBar: AppBar(),
+        appBar: AppBar(
+          title: Text("Message"),
+        ),
         body: Container(
           width: double.infinity,
           child: FutureBuilder(
@@ -50,73 +52,81 @@ class _FeedbackBoxState extends State<FeedbackBox> {
               print(snapshot.data);
 
               if (snapshot.hasData) {
-                return ListView.builder(
-                    itemCount: snapshot.data.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      return Container(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 10),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                children: [
-                                  CircleAvatar(
-                                    radius: MediaQuery.of(context).size.width *
-                                        0.05,
-                                    backgroundColor:
-                                        Theme.of(context).primaryColor,
-                                    child: CircleAvatar(
+                if (snapshot.data.length == 0) {
+                  return Center(
+                    child: Text("No feedback."),
+                  );
+                } else {
+                  return ListView.builder(
+                      itemCount: snapshot.data.length,
+                      itemBuilder: (BuildContext context, int index) {
+                        return Container(
+                          padding:
+                              EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 10),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  children: [
+                                    CircleAvatar(
                                       radius:
                                           MediaQuery.of(context).size.width *
-                                              0.042,
-                                      backgroundColor: Colors.white,
-                                      child: Center(
-                                        child: Icon(
-                                          Icons.admin_panel_settings,
-                                          color: Theme.of(context).primaryColor,
+                                              0.05,
+                                      backgroundColor:
+                                          Theme.of(context).primaryColor,
+                                      child: CircleAvatar(
+                                        radius:
+                                            MediaQuery.of(context).size.width *
+                                                0.042,
+                                        backgroundColor: Colors.white,
+                                        child: Center(
+                                          child: Icon(
+                                            Icons.admin_panel_settings,
+                                            color:
+                                                Theme.of(context).primaryColor,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  )
-                                ],
+                                    )
+                                  ],
+                                ),
                               ),
-                            ),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                      padding: EdgeInsets.only(bottom: 5),
-                                      child: Text("tbc bot")),
-                                  Container(
-                                      width: double.infinity,
-                                      decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color:
-                                                  Colors.grey.withOpacity(0.1),
-                                              spreadRadius: 2,
-                                              blurRadius: 1,
-                                              offset: Offset(0, 1),
-                                            )
-                                          ]),
-                                      padding: EdgeInsets.all(5),
-                                      child: Text(
-                                          snapshot.data[index]['message'])),
-                                ],
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                        padding: EdgeInsets.only(bottom: 5),
+                                        child: Text("tbc bot")),
+                                    Container(
+                                        width: double.infinity,
+                                        decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.grey
+                                                    .withOpacity(0.1),
+                                                spreadRadius: 2,
+                                                blurRadius: 1,
+                                                offset: Offset(0, 1),
+                                              )
+                                            ]),
+                                        padding: EdgeInsets.all(5),
+                                        child: Text(
+                                            snapshot.data[index]['message'])),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      );
-                    });
+                            ],
+                          ),
+                        );
+                      });
+                }
               }
               return LinearProgressIndicator();
             },

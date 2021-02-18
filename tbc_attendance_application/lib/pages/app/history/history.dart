@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -38,7 +37,7 @@ class _HistoryPageState extends State<HistoryPage> {
     "Jun",
     "Jul",
     "Aug",
-    "Set",
+    "Sep",
     "Oct",
     "Nov",
     "Dec"
@@ -92,13 +91,19 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Future emotionStatic() async {
+    var month;
+    for (int i = 0; i <= 11; i++) {
+      if (dropdownMonthValue == monthLists[i]) {
+        month = i + 1;
+      }
+    }
     SharedPreferences prefs = await SharedPreferences.getInstance();
     var _absent = 0;
     return await FirebaseFirestore.instance
         .collection("check_out_log")
         .where("id", isEqualTo: prefs.get("id"))
         .where("year", isEqualTo: int.parse(dropdownValue))
-        .where("month", isEqualTo: selectMonth)
+        .where("month", isEqualTo: month)
         .get()
         .then((QuerySnapshot querySnapshot) {
       var arr = [0.0, 0.0, 0.0, 0.0, 0.0];
@@ -116,21 +121,24 @@ class _HistoryPageState extends State<HistoryPage> {
 
       var dayCount;
       var weekdayCount = 0;
-      if (selectMonth == DateTime.now().month &&
+      if (month == DateTime.now().month &&
           int.parse(dropdownValue) == DateTime.now().year) {
-        dayCount =
-            DateTime(int.parse(dropdownValue), selectMonth, DateTime.now().day)
-                .difference(DateTime(int.parse(dropdownValue), selectMonth, 1))
-                .inDays;
+        dayCount = DateTime(int.parse(dropdownValue), month, DateTime.now().day)
+                .difference(DateTime(int.parse(dropdownValue), month, 1))
+                .inDays +
+            1;
       } else {
-        dayCount = DateTime(int.parse(dropdownValue), selectMonth + 1, 1)
-            .difference(DateTime(int.parse(dropdownValue), selectMonth, 1))
+        dayCount = DateTime(int.parse(dropdownValue), month + 1, 1)
+            .difference(DateTime(int.parse(dropdownValue), month, 1))
             .inDays;
       }
       for (int i = 1; i <= dayCount; i++) {
-        var day = DateTime(int.parse(dropdownValue), selectMonth, i).weekday;
+        var day = DateTime(int.parse(dropdownValue), month, i).weekday;
         if (day == 6 || day == 7) weekdayCount = weekdayCount + 1;
       }
+
+      print("Day count : $dayCount");
+      print("Week count : $weekdayCount");
       if (mounted) {
         setState(() {
           emoStatics = arr;
@@ -181,8 +189,7 @@ class _HistoryPageState extends State<HistoryPage> {
 
         if (day == 6 || day == 7) weekdayCount = weekdayCount + 1;
       }
-      print(DateTime(int.parse(dropdownValue), 1, 33).weekday);
-      print("dayCount : $weekdayCount");
+      //print("dayCount : $weekdayCount");
 
       if (mounted) {
         setState(() {
@@ -300,7 +307,7 @@ class _HistoryPageState extends State<HistoryPage> {
             color: bgColors[selectData[0] - 1],
           ),
           child: Container(
-            padding: EdgeInsets.all(8),
+            padding: EdgeInsets.all(3.5),
             child: Image.asset(
               emoticons[selectData[0] - 1],
               width: double.infinity,
@@ -318,6 +325,12 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Widget calendar() {
+    var month;
+    for (int i = 0; i <= 11; i++) {
+      if (dropdownMonthValue == monthLists[i]) {
+        month = i + 1;
+      }
+    }
     return FutureBuilder(
       future: FirebaseFirestore.instance
           .collection('check_out_log')
@@ -362,6 +375,8 @@ class _HistoryPageState extends State<HistoryPage> {
                           topRight: Radius.circular(10))),
                 ),
                 TableCalendar(
+                  initialSelectedDay:
+                      DateTime(int.parse(dropdownValue), month, 1),
                   calendarController: _calendarController,
                   initialCalendarFormat: CalendarFormat.month,
                   startingDayOfWeek: StartingDayOfWeek.sunday,
@@ -535,8 +550,12 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Widget sorting() {
+    var monthIndex = 0;
     return yearLists == null
-        ? Container()
+        ? Container(
+            width: double.infinity,
+            height: MediaQuery.of(context).size.height * 0.05,
+          )
         : Container(
             width: double.infinity,
             height: MediaQuery.of(context).size.height * 0.05,
@@ -544,57 +563,36 @@ class _HistoryPageState extends State<HistoryPage> {
             margin: EdgeInsets.only(top: 10),
             child: Row(
               children: [
-                Container(
-                  child: DropdownButton(
-                    value: dropdownValue,
-                    iconSize: 24,
-                    elevation: 16,
-                    items:
-                        yearLists.map<DropdownMenuItem<String>>((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value),
-                      );
-                    }).toList(),
-                    onChanged: (String newValue) {
-                      var year = int.parse(newValue);
-                      _calendarController
-                          .setSelectedDay(DateTime(year, selectMonth, 1));
-                      _initialCalendarControler1
-                          .setSelectedDay(DateTime(year, 1, 1));
-                      _initialCalendarControler2
-                          .setSelectedDay(DateTime(year, 2, 1));
-                      _initialCalendarControler3
-                          .setSelectedDay(DateTime(year, 3, 1));
-                      _initialCalendarControler4
-                          .setSelectedDay(DateTime(year, 4, 1));
-                      _initialCalendarControler5
-                          .setSelectedDay(DateTime(year, 5, 1));
-                      _initialCalendarControler6
-                          .setSelectedDay(DateTime(year, 6, 1));
-                      _initialCalendarControler7
-                          .setSelectedDay(DateTime(year, 7, 1));
-                      _initialCalendarControler8
-                          .setSelectedDay(DateTime(year, 8, 1));
-                      _initialCalendarControler9
-                          .setSelectedDay(DateTime(year, 9, 1));
-                      _initialCalendarControler10
-                          .setSelectedDay(DateTime(year, 10, 1));
-                      _initialCalendarControler11
-                          .setSelectedDay(DateTime(year, 11, 1));
-                      _initialCalendarControler12
-                          .setSelectedDay(DateTime(year, 12, 1));
+                firstPage == false
+                    ? Container()
+                    : Container(
+                        child: DropdownButton(
+                          value: dropdownValue,
+                          iconSize: 24,
+                          elevation: 16,
+                          items: yearLists
+                              .map<DropdownMenuItem<String>>((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value),
+                            );
+                          }).toList(),
+                          onChanged: (String newValue) {
+                            var year = int.parse(newValue);
 
-                      setState(() {
-                        dropdownValue = newValue;
-                        //controllersList = arrController;
-                      });
-                      fetchDataForYear();
-                      emotionStatic();
-                      emotionStaticYear();
-                    },
-                  ),
-                ),
+                            print(year);
+                            _calendarController
+                                .setSelectedDay(DateTime(year, selectMonth, 1));
+
+                            setState(() {
+                              dropdownValue = newValue;
+                            });
+                            fetchDataForYear();
+                            emotionStatic();
+                            emotionStaticYear();
+                          },
+                        ),
+                      ),
                 firstPage == false
                     ? Container()
                     : Container(
@@ -652,12 +650,14 @@ class _HistoryPageState extends State<HistoryPage> {
                           month = i + 1;
                         }
                       }
-                      _calendarController.setSelectedDay(
-                          DateTime(int.parse(dropdownValue), month, 1));
+                      _calendarController
+                          .setSelectedDay(DateTime(2020, month, 1));
 
                       fetchDataForYear();
                       emotionStatic();
                       emotionStaticYear();
+
+                      print("Month : $month");
                     },
                     child: Container(
                       width: double.infinity,
@@ -901,6 +901,12 @@ class _HistoryPageState extends State<HistoryPage> {
             } else {
               return Column(
                 children: [
+                  Container(
+                    margin: EdgeInsets.only(bottom: 10),
+                    child: Center(
+                      child: Text("Today"),
+                    ),
+                  ),
                   logCard(snapshot.data[0], "In"),
                   snapshot.data[1] == null
                       ? Container()
@@ -916,6 +922,12 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Widget calendarForYear() {
+    var _itemCount;
+    if (int.parse(dropdownValue) == DateTime.now().year) {
+      _itemCount = DateTime.now().month;
+    } else {
+      _itemCount = 12;
+    }
     return Column(
       children: [
         Container(
@@ -932,16 +944,20 @@ class _HistoryPageState extends State<HistoryPage> {
               }
               return snapshot.data == null
                   ? Center(child: LinearProgressIndicator())
-                  : ListView.builder(
-                      scrollDirection: Axis.vertical,
-                      physics: NeverScrollableScrollPhysics(),
+                  : GridView.builder(
                       shrinkWrap: true,
-                      itemCount: 12,
+                      itemCount: _itemCount,
+                      physics: NeverScrollableScrollPhysics(),
+                      gridDelegate:
+                          new SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.75,
+                      ),
                       itemBuilder: (context, index) {
                         print("index : $index");
 
                         return Container(
-                          margin: EdgeInsets.only(bottom: 5, top: 5),
+                          padding: EdgeInsets.all(10),
                           child: Container(
                             decoration: BoxDecoration(
                                 color: Colors.white,
@@ -985,13 +1001,13 @@ class _HistoryPageState extends State<HistoryPage> {
                                       return Container(
                                         width: double.infinity,
                                         height: double.infinity,
-                                        padding: EdgeInsets.all(5),
+                                        padding: EdgeInsets.all(1),
                                         child: Container(
                                           width: double.infinity,
                                           height: double.infinity,
                                           decoration: BoxDecoration(
                                               borderRadius:
-                                                  BorderRadius.circular(10),
+                                                  BorderRadius.circular(1),
                                               color: Color.fromRGBO(
                                                   237, 237, 237, 1)),
                                         ),
@@ -1009,13 +1025,13 @@ class _HistoryPageState extends State<HistoryPage> {
                                       return Container(
                                         width: double.infinity,
                                         height: double.infinity,
-                                        padding: EdgeInsets.all(5),
+                                        padding: EdgeInsets.all(1),
                                         child: Container(
                                           width: double.infinity,
                                           height: double.infinity,
                                           decoration: BoxDecoration(
                                               borderRadius:
-                                                  BorderRadius.circular(10),
+                                                  BorderRadius.circular(1),
                                               color: Color.fromRGBO(
                                                   237, 237, 237, 1)),
                                         ),
@@ -1027,7 +1043,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                       children.add(Container(
                                           width: double.infinity,
                                           height: double.infinity,
-                                          padding: EdgeInsets.all(5),
+                                          padding: EdgeInsets.all(1),
                                           child: emotionRender(events)));
 
                                       return children;
@@ -1046,3 +1062,140 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 }
+
+// Widget calendarForYear() {
+//     var _itemCount;
+//     if (int.parse(dropdownValue) == DateTime.now().year) {
+//       _itemCount = DateTime.now().month;
+//     } else {
+//       _itemCount = 12;
+//     }
+//     return Column(
+//       children: [
+//         Container(
+//           width: double.infinity,
+//           padding: EdgeInsets.symmetric(horizontal: 10),
+//           child: FutureBuilder(
+//             future: fetchDataForYear(),
+//             builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
+//               print(snapshot.data);
+//               if (!snapshot.hasData) {
+//                 return Center(
+//                   child: LinearProgressIndicator(),
+//                 );
+//               }
+//               return snapshot.data == null
+//                   ? Center(child: LinearProgressIndicator())
+//                   : ListView.builder(
+//                       scrollDirection: Axis.vertical,
+//                       physics: NeverScrollableScrollPhysics(),
+//                       shrinkWrap: true,
+//                       itemCount: _itemCount,
+//                       itemBuilder: (context, index) {
+//                         print("index : $index");
+
+//                         return Container(
+//                           margin: EdgeInsets.only(bottom: 5, top: 5),
+//                           child: Container(
+//                             decoration: BoxDecoration(
+//                                 color: Colors.white,
+//                                 borderRadius: BorderRadius.circular(
+//                                   10,
+//                                 )),
+//                             child: Column(
+//                               children: [
+//                                 Container(
+//                                   decoration: BoxDecoration(
+//                                       color: Theme.of(context).primaryColor,
+//                                       borderRadius: BorderRadius.only(
+//                                           topLeft: Radius.circular(10),
+//                                           topRight: Radius.circular(10))),
+//                                 ),
+//                                 TableCalendar(
+//                                   initialSelectedDay: DateTime(
+//                                       int.parse(dropdownValue), index + 1, 1),
+//                                   calendarController: controllersList[index],
+//                                   initialCalendarFormat: CalendarFormat.month,
+//                                   startingDayOfWeek: StartingDayOfWeek.sunday,
+//                                   endDay: DateTime.now(),
+//                                   availableCalendarFormats: {
+//                                     CalendarFormat.month: ''
+//                                   },
+//                                   events: snapshot.data,
+//                                   calendarStyle: CalendarStyle(
+//                                     markersAlignment: Alignment.center,
+//                                     outsideDaysVisible: false,
+//                                     canEventMarkersOverflow: false,
+//                                   ),
+//                                   headerStyle: HeaderStyle(
+//                                       formatButtonShowsNext: true,
+//                                       centerHeaderTitle: true,
+//                                       formatButtonVisible: true,
+//                                       leftChevronVisible: false,
+//                                       rightChevronVisible: false),
+//                                   availableGestures: AvailableGestures.none,
+//                                   builders: CalendarBuilders(
+//                                     weekendDayBuilder: (context, date, events) {
+//                                       return Container(
+//                                         width: double.infinity,
+//                                         height: double.infinity,
+//                                         padding: EdgeInsets.all(5),
+//                                         child: Container(
+//                                           width: double.infinity,
+//                                           height: double.infinity,
+//                                           decoration: BoxDecoration(
+//                                               borderRadius:
+//                                                   BorderRadius.circular(10),
+//                                               color: Color.fromRGBO(
+//                                                   237, 237, 237, 1)),
+//                                         ),
+//                                       );
+//                                     },
+//                                     outsideWeekendDayBuilder:
+//                                         (context, date, events) {
+//                                       return Container();
+//                                     },
+//                                     outsideDayBuilder: (context, date, events) {
+//                                       return Container();
+//                                     },
+//                                     dayBuilder: (context, date, events) {
+//                                       selectMonth = date.month;
+//                                       return Container(
+//                                         width: double.infinity,
+//                                         height: double.infinity,
+//                                         padding: EdgeInsets.all(5),
+//                                         child: Container(
+//                                           width: double.infinity,
+//                                           height: double.infinity,
+//                                           decoration: BoxDecoration(
+//                                               borderRadius:
+//                                                   BorderRadius.circular(10),
+//                                               color: Color.fromRGBO(
+//                                                   237, 237, 237, 1)),
+//                                         ),
+//                                       );
+//                                     },
+//                                     markersBuilder:
+//                                         (context, date, events, holidays) {
+//                                       final children = <Widget>[];
+//                                       children.add(Container(
+//                                           width: double.infinity,
+//                                           height: double.infinity,
+//                                           padding: EdgeInsets.all(5),
+//                                           child: emotionRender(events)));
+
+//                                       return children;
+//                                     },
+//                                   ),
+//                                 ),
+//                               ],
+//                             ),
+//                           ),
+//                         );
+//                       });
+//             },
+//           ),
+//         ),
+//       ],
+//     );
+//   }

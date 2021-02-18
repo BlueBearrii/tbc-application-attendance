@@ -325,7 +325,38 @@ class _HomePageState extends State<HomePage> {
 
   Widget profile() {
     return imagePath == null
-        ? LinearProgressIndicator()
+        ? Container(
+            padding: EdgeInsets.symmetric(horizontal: 36),
+            margin: EdgeInsets.only(top: 20),
+            child: Container(
+              width: double.infinity,
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: Colors.white,
+                    radius: MediaQuery.of(context).size.width * 0.08,
+                    child: CircleAvatar(
+                      radius: MediaQuery.of(context).size.width * 0.065,
+                      backgroundColor: Colors.white,
+                    ),
+                  ),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Loading ...",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        Container()
+                      ],
+                    ),
+                  )
+                ],
+              ),
+            ))
         : Container(
             padding: EdgeInsets.symmetric(horizontal: 36),
             margin: EdgeInsets.only(top: 20),
@@ -445,7 +476,9 @@ class _HomePageState extends State<HomePage> {
             print(distance);
 
             return isButtonLoading == true
-                ? Center(child: CircularProgressIndicator())
+                ? Container(
+                    margin: EdgeInsets.only(left: 10),
+                    child: Center(child: CircularProgressIndicator()))
                 : FutureBuilder(
                     future: FirebaseFirestore.instance
                         .collection("check_in_switch")
@@ -464,7 +497,9 @@ class _HomePageState extends State<HomePage> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        color: Theme.of(context).primaryColor,
+                        color: state == false
+                            ? Theme.of(context).primaryColor
+                            : Colors.red,
                         onPressed: distance > 60 || snapshot.data == true
                             ? null
                             : () {
@@ -522,7 +557,11 @@ class _HomePageState extends State<HomePage> {
 
   Widget buttonSignIn() {
     return docId == null
-        ? CircularProgressIndicator()
+        ? Container(
+            margin: EdgeInsets.symmetric(vertical: 15),
+            width: double.infinity,
+            height: 50,
+            child: Center(child: CircularProgressIndicator()))
         : Container(
             margin: EdgeInsets.symmetric(vertical: 15),
             width: double.infinity,

@@ -136,6 +136,7 @@ class _ManagerApproveState extends State<ManagerApprove> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        title: Text("Team"),
         elevation: 0,
         actions: [
           IconButton(
@@ -186,6 +187,7 @@ class _ManagerApproveState extends State<ManagerApprove> {
                   if (snapshot.connectionState == ConnectionState.active) {
                     if (snapshot.hasData) return renderCard(snapshot);
                   }
+
                   return LinearProgressIndicator();
                 })
           ],
@@ -198,53 +200,62 @@ class _ManagerApproveState extends State<ManagerApprove> {
     return FutureBuilder(
         future: keyword != "" ? loadMemberBySearch() : loadMember(),
         builder: ((BuildContext context, AsyncSnapshot<dynamic> snapshot) {
-          print(snapshot.connectionState);
           if (snapshot.connectionState == ConnectionState.done) {
-            if (snapshot.hasData)
-              return ListView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
-                  shrinkWrap: true,
-                  itemCount: snapshot.data.length,
-                  itemBuilder: (BuildContext context, int index) =>
-                      GestureDetector(
-                        onLongPress: () {
-                          Navigator.of(context).push(PageRouteBuilder(
-                              opaque: false,
-                              pageBuilder: (BuildContext context, _, __) =>
-                                  MemberHistory(
-                                      id: snapshot.data[index]['data']['id'])));
-                        },
-                        child: Container(
-                          margin: EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                              border: Border.all(width: 0.25),
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(10))),
-                          child: Row(
-                            children: [
-                              Container(
-                                  padding: EdgeInsets.all(10),
-                                  child: CircleAvatar(
-                                    backgroundImage: snapshot.data[index]
-                                                ['data']['path'] ==
-                                            null
-                                        ? null
-                                        : NetworkImage(snapshot.data[index]
-                                            ['data']['path']),
-                                  )),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(snapshot.data[index]['data']['name']),
-                                  Text(snapshot.data[index]['data']['id'])
-                                ],
-                              ),
-                              Expanded(flex: 1, child: Container()),
-                              Container(child: renderToggle(snapshot, index))
-                            ],
+            if (snapshot.hasData) {
+              print("CC21 : ${snapshot.data.length}");
+              if (snapshot.data.length == 0) {
+                return Center(
+                  child: Text("No member, please add into your team"),
+                );
+              } else {
+                return ListView.builder(
+                    physics: const NeverScrollableScrollPhysics(),
+                    shrinkWrap: true,
+                    itemCount: snapshot.data.length,
+                    itemBuilder: (BuildContext context, int index) =>
+                        GestureDetector(
+                          onLongPress: () {
+                            Navigator.of(context).push(PageRouteBuilder(
+                                opaque: false,
+                                pageBuilder: (BuildContext context, _, __) =>
+                                    MemberHistory(
+                                        id: snapshot.data[index]['data']
+                                            ['id'])));
+                          },
+                          child: Container(
+                            margin: EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                                border: Border.all(width: 0.25),
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10))),
+                            child: Row(
+                              children: [
+                                Container(
+                                    padding: EdgeInsets.all(10),
+                                    child: CircleAvatar(
+                                      backgroundColor: Colors.white,
+                                      backgroundImage: snapshot.data[index]
+                                                  ['data']['path'] ==
+                                              null
+                                          ? null
+                                          : NetworkImage(snapshot.data[index]
+                                              ['data']['path']),
+                                    )),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(snapshot.data[index]['data']['name']),
+                                    Text(snapshot.data[index]['data']['id'])
+                                  ],
+                                ),
+                                Expanded(flex: 1, child: Container()),
+                                Container(child: renderToggle(snapshot, index))
+                              ],
+                            ),
                           ),
-                        ),
-                      ));
+                        ));
+              }
+            }
           }
           return Center(
             child: CircularProgressIndicator(),
